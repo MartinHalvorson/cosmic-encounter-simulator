@@ -8,104 +8,176 @@ class Simulator:
 
 class Game:
     def __init__(self, names):
+
+        # Game variables
+
+        # Draw and discard decks for main deck (encounter cards, flares, artifacts, ...)
         self.draw_deck = Deck("draw", False) # Final product will have this as True (draw_deck should be hidden)
         self.discard_deck = Deck("discard")
-        self.destiny_deck = Deck("destiny", False)
-        self.colors = ["red", "orange", "yellow", "green", "blue", "purple"]
 
-        # Used to dictate order of play during an encounter
-        self.phase = "start_turn"
+        # Shuffle all decks
+        self.draw_deck.shuffle()
+        self.discard_deck.shuffle()
+
+        # Determines which player is "destined" to be attacked during the encounter
+        self.destiny_deck = Deck("destiny", False)
+
+        self.warp = [] # Where "dead" ships are stored
+
+        self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
 
         self.powers = ["Zombie", "Cudgel", "Machine", "None"]
-        # Zombie - doesn't lose ships to the warp
-        # Cudgel - if victorious, forces the losing side to lose as many ships as cudgel sent (in addition)
-
-        self.players = []
-        self.offense = None
-        self.defense = None
+        # Add descriptions of alien powers later
 
         # Initializing players
-        for name in names:
-            color = random.choice(self.colors)
+        self.players = []
+        for name in names: # names is a parameter in Game constructor
+            color = random.choice(self.colors) # Chooses random color
             self.colors.remove(color)
-            power = random.choice(self.powers)
+            power = random.choice(self.powers) # Chooses random power
             self.powers.remove(power)
+            # Creates new player with chosen name, color, power
             self.players.append(Player(name, color, power))
 
         # Randomize the order of play
         random.shuffle(self.players)
 
+        # Now that there are players, fill the destiny deck with 10 cards per person
+        for player in self.players:
+            self.destiny_deck.cards += [Card("destiny", player.name, player) for i in range(8)]
+        self.destiny_deck.shuffle()
+
         # Initialize each player with five home planets
         for player in self.players:
             player.home_planets = [Planet(player.name, self.players) for i in range(5)]
-
-        # Essentially where "dead" ships are stored
-        self.warp = []
-
-        # Shuffle the draw deck
-        self.draw_deck.shuffle()
-
-        # Shuffle the destiny deck
-        self.destiny_deck.shuffle()
 
         # Deal each player a starting hand
         for player in self.players:
             self.deal_hand(player)
 
-        print("Game:\nStarting phase:\n" + str(self))
-
+        # Control of flow variables
+        self.phase = "start_turn"
+        self.offense = None
+        self.offense_card = None
+        self.defense = None
+        self.defense_card = None
+        self.winner = None
         self.is_over = False
+        self.encounter = 1
 
         while not self.is_over:
-            encounter = 1
 
-            while encounter == 1 or encounter == 2:
-                # Start turn phase
-                self.phase = "start_turn"
-                self.offense = self.players[0]
+        # Start turn phase
+            self.phase = "Start Turn"
+            print(self)
 
-                # Destiny phase
-                self.phase = "destiny"
-                self.defense = self.destiny_deck.draw() # Should be of type Player
+            if self.encounter == 1:
+                self.offense = self.players[0] # If new offense for this encounter
 
-                print("Offense: " + self.offense + "\nDefense: " + self.defense)
+            print("Offense: " + self.offense.name)
 
-                # Launch phase
-                self.phase = "launch"
+            input()
+        # Destiny phase
+            self.phase = "Destiny"
+            print(self)
+
+            # Draw next destiny card, assign defense
+            self.defense = self.destiny_deck.draw().other # Should be of type Player
+            while self.defense == self.offense:
+                self.defense = self.destiny_deck.draw().other
+
+            print("Offense: " + self.offense.name + "\nDefense: " + self.defense.name)
+
+            input()
+        # Launch phase
+            self.phase = "Launch"
+            print(self)
 
 
-                # Alliance phase
-                self.phase = "alliance"
+            input()
+        # Alliance phase
+            self.phase = "Alliance"
+            print(self)
 
-                # Planning phase
-                self.phase = "planning"
 
-                # Reveal phase
-                self.phase = "reveal"
+            input()
+        # Planning phase
+            self.phase = "Planning"
+            print(self)
 
-                # Resolution phase
-                self.phase = "resolution"
-                self.players.append(self.offense)
-                self.check_if_over()
-                encounter += 1
+            # Randomly select card for offense
+            self.offense_card = random.choice(self.offense.hand)
+            self.offense.hand.remove(self.offense_card)
+
+            # Randomly select card for defense
+            self.defense_card = random.choice(self.defense.hand)
+            self.defense.hand.remove(self.defense_card)
+
+
+            input()
+        # Reveal phase
+            self.phase = "Reveal"
+            print(self)
+
+            print("Offense card: " + str(self.offense_card))
+            print("Defense card: " + str(self.defense_card))
+
+            input()
+        # Resolution phase
+            self.phase = "Resolution"
+            print(self)
+
+            offense_value = self.offense_card.value
+            defense_value = self.defense_card.value
+
+            if offense_value == 0 and defense_value == 0:
+                # Colony swap
+                self.winner = self.offense
+                pass
+            else:
+                # Determines winner
+                if offense_value > defense_value:
+                    self.winner = self.offense
+                else:
+                    self.winner = self.defense
+
+                # Compensation if one (and only one) side negotiated
+                if offense_value == 0:
+                    self.take_cards(self.offense, self.defense, 4)
+                elif defense_value == 0:
+                    self.take_cards(self.defense, self.offense, 4)
+
+            # Prevent offense from going a third time or going again if they lost
+            if self.encounter == 2 or self.winner == self.defense:
+                self.players.append(self.players.pop(0))
+                self.encounter = 1
+            else:
+                self.encounter = 2
+
+            self.check_if_over()
+            self.winner = None
+            input()
 
     # Deals out eight cards to a player
     def deal_hand(self, player):
         for i in range(8):
             player.hand.append(self.draw_deck.draw())
 
-    def initialize_destiny_deck(self):
-        for player in self.players:
-            self.destiny_deck.cards += [Card("destiny", player.name, player) for i in range(3)]
-        self.destiny_deck.shuffle()
-
     def check_if_over(self):
         for player in self.players:
             if len(player.foreign_colonies) == 5:
                 self.is_over = True
 
+    def take_cards(self, player1, player2, num_of_cards):
+        for i in range(num_of_cards):
+            if len(player2.hand) > 0:
+                chosen_card = random.choice(player2.hand)
+                player2.hand.remove(chosen_card)
+                player1.hand.append(chosen_card)
+                print(player1.name + " took " + player2.name + "'s " + str(chosen_card))
+
     def __str__(self):
-        result = ""
+        result = "Phase: " + self.phase + "\n"
         for player in self.players:
             result += str(player)
         result += str(self.draw_deck)
@@ -115,13 +187,15 @@ class Game:
 
 
 class Player:
-    def __init__(self, name, color, power):
+    def __init__(self, name, color, power, hidden = False):
 
         # List of the cards the player contains in his/her hand
         self.hand = []
+
         self.name = name
         self.color = color
         self.power = power
+        self.hidden = hidden # Used to hide opponent's hand
 
         # Everyone starts the game with five home planets; the total changes only in rare circumstances
         self.home_planets = []
@@ -131,12 +205,18 @@ class Player:
 
     # Used for printing out a player
     def __str__(self):
-        result = "Player: " + self.power + " - " + self.name + ", " + self.color + "\n"
+        result = "Player: " + self.name + " \t" + self.power + " \t" + self.color + "\n"
         for planet in self.home_planets:
-            result += str(planet)
-        result += "Hand:\n"
-        for card in self.hand:
-            result += str(card)
+            result += "\t\t" + str(planet)
+        result += "\tHand:\n"
+        if self.hidden:
+            result += "\t<hidden>"
+        else:
+            if len(self.hand) == 0:
+                result += "\t\t<empty>\n"
+            else:
+                for card in self.hand:
+                    result += "\t\t" + str(card)
         return result + "\n"
 
 
@@ -151,7 +231,7 @@ class Deck:
         if type == "draw":
             self.empty = False
             self.cards += [Card("attack", i) for i in range(0, 20)]
-            self.cards += [Card("negotiate", "normal") for i in range(0, 5)]
+            self.cards += [Card("negotiate", 0) for i in range(0, 5)]
 
         if type == "destiny":
             self.empty = False
@@ -183,7 +263,6 @@ class Deck:
         elif self.type == "destiny":
             Game.initialize_destiny_deck()
 
-
     # Used for printing out the cards in the deck
     def __str__(self):
 
@@ -196,12 +275,18 @@ class Deck:
 
         # Adds cards to return string if not hidden
         if self.empty:
-            result += "<empty>\n"
+            result += "\t<empty>\n"
         elif self.hidden:
-            result += "<hidden>\n"
+            result += "\t<hidden>\n"
         else:
+            count = 0
             for card in self.cards:
-                result += str(card)
+                count += 1
+                num_cards_shown = 5
+                result += "\t" + str(card)
+                if count == num_cards_shown and (len(self.cards) > num_cards_shown):
+                    result += "\t<plus " + str(len(self.cards) - num_cards_shown) + " more>\n"
+                    break
         return result + "\n"
 
 
@@ -213,7 +298,7 @@ class Card:
 
     # Used for printing out the type of card
     def __str__(self):
-        return self.type + " - " + str(self.value) + "\n"
+        return self.type + " ~ " + str(self.value) + "\n"
 
 
 class Planet:
