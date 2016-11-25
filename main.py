@@ -2,13 +2,13 @@ import random
 
 
 class Simulator:
-    def __init__(self, names):
-        self.game = Game(names)
+    def __init__(self, names_dict):
+        self.game = Game(names_dict)
         print(self.game.winners)
 
 
 class Game:
-    def __init__(self, names):
+    def __init__(self, names_dict):
 
         # Game variables
 
@@ -26,20 +26,30 @@ class Game:
         self.warp = [] # Where "dead" ships are stored
         self.planets = []
 
-        self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple"]
+        self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
         self.powers = ["Zombie", "Cudgel", "Machine", "Loser", "Filch", "Reserve", "Vulch", "Macron", "Virus", "Tripler", "Masochist", "Warpish", "Symbiote", "None"]
         # Add descriptions of alien powers later
 
         # Initializing players
         self.players = []
-        for name in names: # names is a parameter in Game constructor
-            color = random.choice(self.colors) # Chooses random color
-            self.colors.remove(color)
-            power = random.choice(self.powers) # Chooses random power
-            self.powers.remove(power)
+        for person_dict in names_dict: # names is a parameter in Game constructor
+
+            color = person_dict.get("color", random.choice(self.colors)) # Chooses random color
+            # Exception handling here can allow multiple people to be the same color
+            try:
+                self.colors.remove(color)
+            except:
+                pass
+
+            power = person_dict.get("power", random.choice(self.powers)) # Chooses random power
+            # Exception handling here can allow multiple people to be the same power
+            try:
+                self.powers.remove(power)
+            except:
+                pass
             # Creates new player with chosen name, color, power
-            self.players.append(Player(name, color, power))
+            self.players.append(Player(person_dict["name"], color, power))
 
         # Randomize the order of play
         random.shuffle(self.players)
@@ -67,12 +77,15 @@ class Game:
         self.is_over = False
         self.encounter = 1
         self.ranking = []
+        self.output = ""
+        self.defense_planet = None
 
         # Sets home planets for each player
         for player in self.players:
             player.home_planets = self.home_planets(player)
 
         while not self.is_over:
+            self.output = ""
             input("New Encounter")
 
         # Start turn phase
@@ -80,33 +93,38 @@ class Game:
 
             self.phase = "Start Turn"
             print(self)
+            print("Phase: " + self.phase + "\n")
 
             if self.encounter == 1:
                 self.offense = self.players[0] # If new offense for this encounter
 
             # Fanciest line of code in whole program
             # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
-            print("Offense: " + self.offense.name)
+            self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking])
+
+            self.output += "\n\nOffense: " + self.offense.name + "\n"
+            print(self.output)
 
             input()
         # Destiny phase
             self.phase = "Destiny"
             print(self)
+            print("Phase: " + self.phase + "\n")
 
             # Draw next destiny card, assign defense
-            self.defense = self.destiny_deck.draw().other # Should be of type Player
+            self.defense = self.destiny_deck.draw(self.discard_deck).other # Should be of type Player
             while self.defense == self.offense:
-                self.defense = self.destiny_deck.draw().other
+                self.defense = self.destiny_deck.draw(self.discard_deck).other
 
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
-            print("Offense: " + self.offense.name + "\nDefense: " + self.defense.name)
+            self.output += "Defense: " + self.defense.name + "\n\n"
+            print(self.output)
 
             input()
+
         # Launch phase
             self.phase = "Launch"
+            print(self)
+            print("Phase: " + self.phase + "\n")
 
             self.defense_planet = random.choice(self.home_planets(self.defense))
 
@@ -115,82 +133,93 @@ class Game:
                 self.defense_planet = random.choice(self.home_planets(self.defense))
 
             # Ships offense is sending into the encounter
-            self.offense_ships = {self.offense.name: 3}
+            offense_ships_chosen = 3
+            self.offense_ships = {self.offense.name: offense_ships_chosen}
+
+            # Remove ships from offense's home planets
+            for i in range(offense_ships_chosen):
+                planet = random.choice(self.home_planets(self.offense))
+                if planet.ships.get(self.offense.name, 0) > 1:
+                    planet.ships[self.offense.name] -= 1
+                else:
+                    i -= 1
 
             # Ships defense is sending into the encounter
             self.defense_ships = {self.defense.name: self.defense_planet.ships.get(self.defense.name, 0)}
 
-            print(self)
-
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
-
-            print("Defense " + str(self.defense_planet))
-            print("Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)))
-            print("Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)))
+            self.output += "Defense " + str(self.defense_planet) + "\n"
+            self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
+            self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
+            print(self.output)
 
             input()
         # Alliance phase
             self.phase = "Alliance"
+            print(self)
 
             # Fill in invited logic
             self.offense_allies = []
             self.defense_allies = []
 
-            print(self)
-
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
-
             # Determines and prints offense invites
-            print("Offense invites: ")
+            self.output += "Offense invites:\n"
             if self.offense_allies == []:
-                print("\t<No one invited>")
+                self.output += "\t<No one invited>\n"
             else:
                 for invitee in self.offense_allies:
-                    print(invitee.name)
+                    self.output += invitee.name + "\n"
 
             # Determines and prints defense invites
-            print("\nDefense invites: ")
+            self.output += "\nDefense invites:\n "
             if self.defense_allies == []:
-                print("\t<No one invited>")
+                self.output += "\t<No one invited>\n"
             else:
                 for invitee in self.defense_allies:
-                    print(invitee.name)
+                    self.output += invitee.name + "\n"
+            self.output += "\n"
 
             # Determines and prints which players join which side
             for player in self.players:
                 if player != self.offense and player != self.defense:
-                    if self.offense_allies.contains(player):
-                        print(player.name + " joins the offense!")
+                    if player in self.offense_allies:
+                        self.output += player.name + " joins the offense!\n"
                         if player in self.defense_allies:
                             self.defense_allies.remove(player)
-                    elif self.defense_allies.contains(player):
-                        print(player.name + " joins the defense!")
+                    elif player in self.defense_allies:
+                        self.output += player.name + " joins the defense!\n"
                         if player in self.offense_allies:
                             self.offense_allies.remove(player)
                     else:
-                        print(player.name + " doesn't join either side.")
+                        self.output += player.name + " doesn't join either side.\n"
 
+            print("Phase: " + self.phase + "\n")
+            print(self.output)
 
             input()
         # Planning phase
             self.phase = "Planning"
-
             print(self)
 
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
-
+            # Provides new hand for offense if he/she needs one
+            if len(self.offense.hand) == 0:
+                self.deal_hand(self.offense)
+                self.output += self.offense.name + " draws a new hand."
 
             # Randomly select card for offense
             self.offense_card = random.choice(self.offense.hand)
             self.offense.hand.remove(self.offense_card)
 
+            # Provides new hand for defense if he/she needs one
+            if len(self.defense.hand) == 0:
+                self.deal_hand(self.defense)
+                self.output += self.defense.name + " draws a new hand."
+
             # Randomly select card for defense
             self.defense_card = random.choice(self.defense.hand)
             self.defense.hand.remove(self.defense_card)
 
+            print("Phase: " + self.phase + "\n")
+            print(self.output)
 
             input()
         # Reveal phase
@@ -198,53 +227,70 @@ class Game:
 
             print(self)
 
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
+            self.output += "\nOffense card: " + str(self.offense_card)
+            self.output += "Defense card: " + str(self.defense_card) + "\n"
 
-            print("Offense card: " + str(self.offense_card) + "Defense card: " + str(self.defense_card))
+            print("Phase: " + self.phase + "\n")
+            print(self.output)
 
             input()
         # Resolution phase
             self.phase = "Resolution"
             print(self)
-
-            print("Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking]))
-            print("Phase: " + self.phase + "\n")
+            self.set_ranking()
 
             offense_value = self.offense_card.value
             defense_value = self.defense_card.value
 
+            # Both drop negotiates
             if offense_value == 0 and defense_value == 0:
-                self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense, 0)
+                self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
 
                 # Add defensive ships to one of offense's home planets
                 new_planet_for_defense = random.choice(self.offense)
-                while new_planet_for_defense.ships.get(self.defense.name, 0) == 0:
-                    new_planet_for_defense = random.choice(self.offense)
+                while new_planet_for_defense.ships.get(self.defense.name, 0) != 0:
+                    new_planet_for_defense = random.choice(self.offense.home_planets)
 
-                new_planet_for_defense.ships[self.defense.name] = self.defense_ships.get(self.defense, 0)
+                new_planet_for_defense.ships[self.defense.name] = self.defense_ships.get(self.defense.name, 0)
+
+                self.output += "Colony swap occurred.\n"
 
                 self.winner = self.offense
                 pass
 
             # Offense dropped negotiate
             elif offense_value == 0:
-                self.take_cards(self.offense, self.defense, self.offense_ships)
+                # Offense gets cards from defense
+                self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
+                self.output += "\nDefense wins, offense draws cards.\n"
 
             # Defense dropped negotiate
             elif defense_value == 0:
-                self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense, 0)
-                self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense, 0))
+                # Add offense's ships
+                self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
+                self.defense_planet.ships[self.defense.name] = 0
+
+                # Defense gets cards from offense
+                self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
+                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
+
+            # Both drop attack cards
             else:
+                # Add in value of ships
                 offense_value += sum(self.offense_ships.values())
                 defense_value += sum(self.defense_ships.values())
 
+                # Add some option for reinforcements later
+
                 # Determines winner
                 if offense_value > defense_value:
+                    self.output += "Offense wins and lands on the colony.\n"
                     self.winner = self.offense
+                    self.defense_planet.ships[self.defense.name] = 0
                     for player in self.offense_ships:
-                        self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense, 0)
+                        self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
                 else:
+                    self.output += "Defense wins.\n"
                     self.winner = self.defense
 
             # Prevent offense from going a third time or going again if they lost
@@ -254,9 +300,15 @@ class Game:
             else:
                 self.encounter = 2
 
-            # Resets home planets for each player if any were changed
+            if self.encounter == 2:
+                self.output += "Offense elects for another encounter."
+
+            # Updates planet list for each player if any were changed
             for player in self.players:
                 player.home_planets = self.home_planets(player)
+
+            print("Phase: " + self.phase + "\n")
+            print(self.output)
 
             self.check_if_over()
             self.winner = None
@@ -271,7 +323,7 @@ class Game:
     # Deals out eight cards to a player
     def deal_hand(self, player):
         for i in range(8):
-            player.hand.append(self.draw_deck.draw())
+            player.hand.append(self.draw_deck.draw(self.discard_deck))
 
     # Returns list of home planets of input player
     def home_planets(self, player):
@@ -292,7 +344,7 @@ class Game:
                 chosen_card = random.choice(player2.hand)
                 player2.hand.remove(chosen_card)
                 player1.hand.append(chosen_card)
-                print(player1.name + " took " + player2.name + "'s " + str(chosen_card))
+                self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
 
     def take_ships(self, player, num_of_ships):
         for i in range(num_of_ships):
@@ -342,9 +394,15 @@ class Player:
     # Used for printing out a player
     def __str__(self):
         result = "Player: " + self.name + " \t" + self.power + " \t" + self.color + "\n"
+
+        # Adds Player's planets to result
         for planet in self.home_planets:
             result += "\t\t" + str(planet)
-        result += "\tHand:\n"
+
+        # Adds Player's hand to result
+        result += "\tHand: (" + str(len(self.hand)) + " cards)\n"
+
+        # Depending on who's playing, hand may be hidden
         if self.hidden:
             result += "\t<hidden>"
         else:
@@ -366,7 +424,8 @@ class Deck:
         # Draw deck initialized with attack cards 0-19, 5 negotiates
         if type == "draw":
             self.empty = False
-            self.cards += [Card("attack", i) for i in range(0, 20)]
+            self.cards += [Card("attack", i) for i in range(0, 30)]
+            self.cards += [Card("attack", i) for i in range(0, 15)]
             self.cards += [Card("negotiate", 0) for i in range(0, 5)]
 
         if type == "destiny":
@@ -375,9 +434,11 @@ class Deck:
         # The discard deck will be initialized as empty
 
     # Removes first card in Deck and returns it
-    def draw(self):
+    def draw(self, discard_deck):
         if self.empty:
+            self.cards = discard_deck.cards
             self.reshuffle()
+            discard_deck.cards = []
         self.empty = len(self.cards) - 1 == 0
         return self.cards.pop()
 
@@ -443,10 +504,6 @@ class Planet:
         self.owner = player
         self.players = players
 
-    # Used to add ships to a Planet
-    def add_ship(self, player, num_of_ships):
-        self.ships[player.name] = self.ships.get(player.name, 0) + num_of_ships
-
     def __str__(self):
         result = "Planet: "
         for player in self.players:
@@ -454,6 +511,8 @@ class Planet:
                 result += str(player.name) + " " + str(self.ships[player.name]) + "   "
         return result + "\n"
 
-
-
-sim = Simulator(["Alvin", "Brady"])
+sim = Simulator([{"name": "Martin", "power": "None", "color": "Orange"},
+                 {"name": "Alvin", "color": "Blue"},
+                 {"name": "Brady", "color": "Blue"},
+                 {"name": "Charlie"},
+                 {"name": "Donnie"}])
