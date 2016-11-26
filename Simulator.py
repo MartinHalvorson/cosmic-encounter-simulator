@@ -370,6 +370,12 @@ class Game:
                 offense_value += sum(self.offense_ships.values())
                 defense_value += sum(self.defense_ships.values())
 
+                if self.offense.power == "Warpish":
+                    offense_value += sum(self.warp.values())
+
+                if self.defense.power == "Warpish":
+                    defense_value += sum(self.warp.values())
+
                 # Add some option for reinforcements later
 
                 # Determines encounter winner
@@ -389,11 +395,11 @@ class Game:
                     self.encounter_winner = self.defense
 
             # Prevent offense from going a third time or going again if they lost
-            if self.encounter == 2 or self.encounter_winner == self.defense:
+            if ((self.encounter == 1 and self.encounter_winner == self.offense) or self.offense.power == "Machine") and self.has_encounter_card(self.offense):
+                self.encounter = 2
+            else:
                 self.players.append(self.players.pop(0))
                 self.encounter = 1
-            else:
-                self.encounter = 2
 
             # Offense may elect for second encounter if both victorious on first and he/she has another encounter card
             if self.encounter == 2:
@@ -435,6 +441,12 @@ class Game:
             if planet.owner == player:
                 result.append(planet)
         return result
+
+    def has_encounter_card(self, player):
+        for card in player.hand:
+            if card.type == "attack" or card.type == "negotiate":
+                return True
+        return False
 
     def check_if_over(self):
         for player in self.players:
