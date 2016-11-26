@@ -13,7 +13,7 @@ class Game:
         self.step_through = step_through
 
         # Game variables
-        self.warp = [] # Where "dead" ships are stored
+        self.warp = {} # Where "dead" ships are stored
         self.planets = []
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
@@ -345,6 +345,7 @@ class Game:
             elif offense_value == 0:
                 # Offense gets cards from defense
                 self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
+                self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
                 if step_through:
                     self.output += "\nDefense wins, offense draws cards.\n"
                 self.encounter_winner = self.defense
@@ -355,6 +356,8 @@ class Game:
                 self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
                 self.defense_planet.ships[self.defense.name] = 0
                 self.encounter_winner = self.offense
+                self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
+
 
                 # Defense gets cards from offense
                 self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
@@ -375,11 +378,14 @@ class Game:
                         self.output += "Offense wins and lands on the colony.\n"
                     self.encounter_winner = self.offense
                     self.defense_planet.ships[self.defense.name] = 0
+                    self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
+
                     for player in self.offense_ships:
                         self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
                 else:
                     if step_through:
                         self.output += "Defense wins.\n"
+                    self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
                     self.encounter_winner = self.defense
 
             # Prevent offense from going a third time or going again if they lost
@@ -458,7 +464,9 @@ class Game:
     def __str__(self):
         result = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
         result += "Phase: " + self.phase + "\n"
-
+        result += "Warp:\n"
+        for player in self.players:
+            result += str(player.name) + ": " + str(self.warp.get(player.name, 0)) + "\n"
         # Add each player to the output
         for player in self.players:
             result += str(player)

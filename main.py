@@ -10,7 +10,7 @@ for i in range(10):
         {"name": "Brady"},
         {"name": "Charlie"},
         {"name": "Donnie"}],
-        False)
+        True)
     for player in sim.game.game_winners:
         winner_count[player.name] = winner_count.get(player.name, 0) + 1
 
