@@ -394,6 +394,11 @@ class Game:
                     self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
                     self.encounter_winner = self.defense
 
+            for player in self.players:
+                if player.power == "Zombie":
+                    self.return_ships(player, self.warp.get(player.name, 0))
+                    self.warp[player.name] = 0
+
             # Prevent offense from going a third time or going again if they lost
             if ((self.encounter == 1 and self.encounter_winner == self.offense) or self.offense.power == "Machine") and self.has_encounter_card(self.offense):
                 self.encounter = 2
@@ -441,6 +446,14 @@ class Game:
             if planet.owner == player:
                 result.append(planet)
         return result
+
+    def return_ships(self, player, num_ships):
+        for i in range(num_ships):
+            planet = random.choice(player.home_planets)
+            if planet.ships.get(player.name, 0) > 0:
+                planet.ships[player.name] = planet.ships[player.name] + 1
+            else:
+                i -= 1
 
     def has_encounter_card(self, player):
         for card in player.hand:
