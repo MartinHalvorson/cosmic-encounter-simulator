@@ -4,7 +4,8 @@ import random
 class Simulator:
     def __init__(self, names_dict):
         self.game = Game(names_dict)
-        print(self.game.winners)
+        for winner in self.game.winners:
+            print(winner.name)
 
 
 class Game:
@@ -21,7 +22,8 @@ class Game:
         self.discard_deck.shuffle()
 
         # Determines which player is "destined" to be attacked during the encounter
-        self.destiny_deck = Deck("destiny", False)
+        self.destiny_draw_deck = Deck("destiny", False)
+        self.destiny_discard_deck = Deck()
 
         self.warp = [] # Where "dead" ships are stored
         self.planets = []
@@ -56,8 +58,8 @@ class Game:
 
         # Now that there are players, fill the destiny deck with 10 cards per person
         for player in self.players:
-            self.destiny_deck.cards += [Card("destiny", player.name, player) for i in range(8)]
-        self.destiny_deck.shuffle()
+            self.destiny_draw_deck.cards += [Card("destiny", player.name, player) for i in range(8)]
+        self.destiny_draw_deck.shuffle()
 
         # Initialize each player with five home planets
         for player in self.players:
@@ -112,9 +114,16 @@ class Game:
             print("Phase: " + self.phase + "\n")
 
             # Draw next destiny card, assign defense
-            self.defense = self.destiny_deck.draw(self.discard_deck).other # Should be of type Player
+            self.destiny_card = self.destiny_draw_deck.draw(self.discard_deck)
+            self.defense = self.desinty_card.other  # Should be of type Player
+
+            # Put destiny card in destiny discard deck
+            self.destiny_discard_deck.append(self.destiny_card)
+
             while self.defense == self.offense:
-                self.defense = self.destiny_deck.draw(self.discard_deck).other
+                self.destiny_card = self.destiny_draw_deck.draw(self.discard_deck)
+                self.defense = self.desinty_card.other
+                self.destiny_discard_deck.append(self.destiny_card)
 
             self.output += "Defense: " + self.defense.name + "\n\n"
             print(self.output)
@@ -191,6 +200,7 @@ class Game:
                             self.offense_allies.remove(player)
                     else:
                         self.output += player.name + " doesn't join either side.\n"
+            self.output += "\n"
 
             print("Phase: " + self.phase + "\n")
             print(self.output)
@@ -203,7 +213,7 @@ class Game:
             # Provides new hand for offense if he/she needs one
             if len(self.offense.hand) == 0:
                 self.deal_hand(self.offense)
-                self.output += self.offense.name + " draws a new hand."
+                self.output += self.offense.name + " draws a new hand.\n"
 
             # Randomly select card for offense
             self.offense_card = random.choice(self.offense.hand)
@@ -212,7 +222,7 @@ class Game:
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0:
                 self.deal_hand(self.defense)
-                self.output += self.defense.name + " draws a new hand."
+                self.output += self.defense.name + " draws a new hand.\n"
 
             # Randomly select card for defense
             self.defense_card = random.choice(self.defense.hand)
@@ -247,7 +257,7 @@ class Game:
                 self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
 
                 # Add defensive ships to one of offense's home planets
-                new_planet_for_defense = random.choice(self.offense)
+                new_planet_for_defense = random.choice(self.offense.home_planets)
                 while new_planet_for_defense.ships.get(self.defense.name, 0) != 0:
                     new_planet_for_defense = random.choice(self.offense.home_planets)
 
@@ -309,6 +319,10 @@ class Game:
 
             print("Phase: " + self.phase + "\n")
             print(self.output)
+
+            # Add cards to discard pile
+            self.discard_deck.cards.append(self.offense_card)
+            self.discard_deck.cards.append(self.defense_card)
 
             self.check_if_over()
             self.winner = None
@@ -373,7 +387,7 @@ class Game:
             result += str(player)
         result += str(self.draw_deck)
         result += str(self.discard_deck)
-        result += str(self.destiny_deck)
+        result += str(self.destiny_draw_deck)
         return result
 
 
@@ -458,7 +472,7 @@ class Deck:
         if self.type == "draw":
             self = Deck("draw")
         elif self.type == "destiny":
-            Game.initialize_destiny_deck()
+            self.cards
 
     # Used for printing out the cards in the deck
     def __str__(self):
