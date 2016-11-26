@@ -37,8 +37,9 @@ class Game:
                 self.powers.remove(power)
             except:
                 pass
+            strategy = person_dict.get("strategy", None)
             # Creates new player with chosen name, color, power
-            self.players.append(Player(person_dict["name"], color, power))
+            self.players.append(Player(person_dict["name"], color, power, strategy))
 
         # Randomize the order of play
         random.shuffle(self.players)
@@ -425,7 +426,7 @@ class Game:
 
 
 class Player:
-    def __init__(self, name, color, power, hidden = False):
+    def __init__(self, name, color, power, strategy, hidden = False):
 
         # List of the cards the player contains in his/her hand
         self.hand = []
@@ -433,7 +434,11 @@ class Player:
         self.name = name
         self.color = color
         self.power = power
+        self.strategy = strategy
         self.hidden = hidden # Used to hide opponent's hand
+
+        # Once powers become a thing, add rule to update after attack if players still have their powers
+        self.power_active = True
 
         # Game finishes once a player or multiple players reach five foreign colonies
         self.home_planets = []
@@ -573,7 +578,7 @@ class Planet:
                 result += str(player.name) + " " + str(self.ships[player.name]) + "   "
         return result + "\n"
 
-sim = Simulator([{"name": "Martin", "power": "None", "color": "Orange"},
+sim = Simulator([{"name": "Martin", "power": "None", "color": "Orange", "strategy": "def-neg"},
                  {"name": "Alvin", "color": "Blue"},
                  {"name": "Brady", "color": "Blue"},
                  {"name": "Charlie"},
