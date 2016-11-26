@@ -5,12 +5,12 @@ winner_count = {}
 
 for i in range(1000):
     sim = Simulator.Simulator([
-        {"name": "Alvin", "power": "Machine"},
-        {"name": "Brady", "power": "Warpish"},
-        {"name": "Charlie", "power": "Zombie"},
-        {"name": "Donnie"},
-        {"name": "Martin", "strategy": "def-neg"}],
-        False)
+        {"name": "Alvin", "power": "None"},
+        {"name": "Brady", "power": "Zombie"},
+        {"name": "Charlie", "power": "None"},
+        {"name": "Donnie", "power": "None"},
+        {"name": "Martin", "power": "None"}
+        ], False)
     for player in sim.game.game_winners:
         winner_count[player.name] = winner_count.get(player.name, 0) + 1
 

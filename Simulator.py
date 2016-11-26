@@ -180,6 +180,10 @@ class Game:
 
             # Ships offense is sending into the encounter
             offense_ships_chosen = 3
+
+            if self.offense.power == "Zombie":
+                offense_ships_chosen = 4
+
             self.offense_ships = {self.offense.name: offense_ships_chosen}
 
             # Remove appropriate number of ships from offense's (home) planets
