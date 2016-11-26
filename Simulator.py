@@ -2,14 +2,15 @@ import random
 
 
 class Simulator:
-    def __init__(self, names_dict):
-        self.game = Game(names_dict)
-        for winner in self.game.game_winners:
-            print(winner.name)
+    def __init__(self, names_dict, step_through = False):
+        self.game = Game(names_dict, step_through)
 
 
 class Game:
-    def __init__(self, names_dict):
+    def __init__(self, names_dict, step_through = False):
+
+        # Simulation variables
+        self.step_through = step_through
 
         # Game variables
         self.warp = [] # Where "dead" ships are stored
@@ -94,21 +95,27 @@ class Game:
             player.home_planets = self.home_planets(player)
 
         # A little guidance for navigating the console
-        print("<Enter> to advance.\n")
+        if step_through:
+            print("<Enter> to advance.\n")
 
         # This is the main while loop where an entire encounter is cycled through
         while not self.is_over:
 
-            self.output = ""
+            if step_through:
+                self.output = ""
+
             self.encounter_winner = None
-            input("New Encounter")
+
+            if step_through:
+                input("New Encounter")
 
         # Start Turn phase
             self.phase = "Start Turn"
 
             # Prints state of the game, which includes visible decks and players (their hands and planets)
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             if self.encounter == 1:
                 self.offense = self.players[0]  # Selects new offense for this encounter
@@ -116,19 +123,22 @@ class Game:
             # Fanciest line of code in whole program
             # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
             self.set_ranking()
-            self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking])
 
-            self.output += "\n\nOffense: " + self.offense.name + "\n"
+            if step_through:
+                self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking])
 
-            print(self.output)
+                self.output += "\n\nOffense: " + self.offense.name + "\n"
 
-            input()
+                print(self.output)
+
+                input()
 
         # Destiny phase
             self.phase = "Destiny"
 
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             # Draw next destiny card, assign defense
             self.destiny_card = self.destiny_draw_deck.draw()
@@ -148,16 +158,18 @@ class Game:
             # Put destiny card in destiny discard deck
             self.destiny_discard_deck.discard(self.destiny_card)
 
-            self.output += "Defense: " + self.defense.name + "\n\n"
-            print(self.output)
+            if step_through:
+                self.output += "Defense: " + self.defense.name + "\n\n"
+                print(self.output)
 
-            input()
+                input()
 
         # Launch phase
             self.phase = "Launch"
 
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             # May change this later to select the most advantageous planet for the offense to attack
             self.defense_planet = random.choice(self.home_planets(self.defense))
@@ -183,69 +195,79 @@ class Game:
 
             # In the event of the defense losing, defense ships will be removed in the resolution stage
 
-            self.output += "Defense " + str(self.defense_planet) + "\n"
-            self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
-            self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
-            print(self.output)
+            if step_through:
+                self.output += "Defense " + str(self.defense_planet) + "\n"
+                self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
+                self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
+                print(self.output)
 
-            input()
+                input()
 
         # Alliance phase
             self.phase = "Alliance"
 
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             # Fill in invited logic
             self.offense_allies = []
             self.defense_allies = []
 
             # Determines and prints offensive invitees
-            self.output += "Offense invites:\n"
-            if self.offense_allies == []:
-                self.output += "\t<No one invited>\n"
-            else:
-                for invitee in self.offense_allies:
-                    self.output += invitee.name + "\n"
+            if step_through:
+                self.output += "Offense invites:\n"
+                if self.offense_allies == []:
+                    self.output += "\t<No one invited>\n"
+                else:
+                    for invitee in self.offense_allies:
+                        self.output += invitee.name + "\n"
 
             # Determines and prints defensive invitees
-            self.output += "\nDefense invites:\n "
-            if self.defense_allies == []:
-                self.output += "\t<No one invited>\n"
-            else:
-                for invitee in self.defense_allies:
-                    self.output += invitee.name + "\n"
+            if step_through:
+                self.output += "\nDefense invites:\n "
+                if self.defense_allies == []:
+                    self.output += "\t<No one invited>\n"
+                else:
+                    for invitee in self.defense_allies:
+                        self.output += invitee.name + "\n"
 
-            self.output += "\n"
+                self.output += "\n"
 
             # Determines and prints which players join which side
             for player in self.players:
                 if player != self.offense and player != self.defense:
                     if player in self.offense_allies:
-                        self.output += player.name + " joins the offense!\n"
+                        if step_through:
+                            self.output += player.name + " joins the offense!\n"
                         if player in self.defense_allies:
                             self.defense_allies.remove(player)
                     elif player in self.defense_allies:
-                        self.output += player.name + " joins the defense!\n"
+                        if step_through:
+                            self.output += player.name + " joins the defense!\n"
                         if player in self.offense_allies:
                             self.offense_allies.remove(player)
                     else:
-                        self.output += player.name + " doesn't join either side.\n"
+                        if step_through:
+                            self.output += player.name + " doesn't join either side.\n"
 
-            print(self.output)
+            if step_through:
+                print(self.output)
 
-            input()
+                input()
 
         # Planning phase
             self.phase = "Planning"
 
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             # Provides new hand for offense if he/she needs one
             if len(self.offense.hand) == 0:
                 self.deal_hand(self.offense)
-                self.output += "\n" + self.offense.name + " draws a new hand.\n"
+                if step_through:
+                    self.output += "\n" + self.offense.name + " draws a new hand.\n"
 
             # Select max value card for offense
             self.offense_card = self.offense.hand[0]
@@ -257,7 +279,8 @@ class Game:
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0:
                 self.deal_hand(self.defense)
-                self.output += "\n" + self.defense.name + " draws a new hand.\n"
+                if step_through:
+                    self.output += "\n" + self.defense.name + " draws a new hand.\n"
 
             # "def-neg" strategy is to play a negotiate as defense to obtain more cards
             if self.defense.strategy == "def-neg":
@@ -272,28 +295,31 @@ class Game:
                 self.defense_card = random.choice(self.defense.hand)
                 self.defense.hand.remove(self.defense_card)
 
-            print(self.output)
+            if step_through:
+                print(self.output)
 
-            input()
+                input()
 
         # Reveal phase
             self.phase = "Reveal"
 
-            print(self)
+            if step_through:
+                print(self)
 
-            self.output += "\nOffense card: " + str(self.offense_card)
-            self.output += "Defense card: " + str(self.defense_card) + "\n"
+                self.output += "\nOffense card: " + str(self.offense_card)
+                self.output += "Defense card: " + str(self.defense_card) + "\n"
 
-            print("Phase: " + self.phase + "\n")
-            print(self.output)
+                print("Phase: " + self.phase + "\n")
+                print(self.output)
 
-            input()
+                input()
 
         # Resolution phase
             self.phase = "Resolution"
 
-            print(self)
-            print("Phase: " + self.phase + "\n")
+            if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
 
             offense_value = self.offense_card.value
             defense_value = self.defense_card.value
@@ -309,7 +335,8 @@ class Game:
 
                 new_planet_for_defense.ships[self.defense.name] = self.defense_ships.get(self.defense.name, 0)
 
-                self.output += "Colony swap occurred.\n"
+                if step_through:
+                    self.output += "Colony swap occurred.\n"
 
                 self.encounter_winner = self.offense
                 pass
@@ -318,7 +345,8 @@ class Game:
             elif offense_value == 0:
                 # Offense gets cards from defense
                 self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
-                self.output += "\nDefense wins, offense draws cards.\n"
+                if step_through:
+                    self.output += "\nDefense wins, offense draws cards.\n"
                 self.encounter_winner = self.defense
 
             # Defense dropped negotiate
@@ -330,7 +358,8 @@ class Game:
 
                 # Defense gets cards from offense
                 self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
-                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
+                if step_through:
+                    self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
 
             # Both drop attack cards
             else:
@@ -342,13 +371,15 @@ class Game:
 
                 # Determines encounter winner
                 if offense_value > defense_value:
-                    self.output += "Offense wins and lands on the colony.\n"
+                    if step_through:
+                        self.output += "Offense wins and lands on the colony.\n"
                     self.encounter_winner = self.offense
                     self.defense_planet.ships[self.defense.name] = 0
                     for player in self.offense_ships:
                         self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
                 else:
-                    self.output += "Defense wins.\n"
+                    if step_through:
+                        self.output += "Defense wins.\n"
                     self.encounter_winner = self.defense
 
             # Prevent offense from going a third time or going again if they lost
@@ -360,13 +391,15 @@ class Game:
 
             # Offense may elect for second encounter if both victorious on first and he/she has another encounter card
             if self.encounter == 2:
-                self.output += "Offense elects for another encounter."
+                if step_through:
+                    self.output += "Offense elects for another encounter."
 
             # Updates planet list for each player if any were changed
             for player in self.players:
                 player.home_planets = self.home_planets(player)
 
-            print(self.output)
+            if step_through:
+                print(self.output)
 
             # Adds encounter cards to discard pile
             self.discard_deck.cards.append(self.offense_card)
@@ -374,7 +407,8 @@ class Game:
 
             self.check_if_over()
 
-            input()
+            if step_through:
+                input()
 
         # Game Over, determining winners
         for player in self.players:
