@@ -14,16 +14,14 @@ class Game:
         # Game variables
 
         # Draw and discard decks for main deck (encounter cards, flares, artifacts, ...)
-        self.draw_deck = Deck("draw", False) # Final product will have this as True (draw_deck should be hidden)
-        self.discard_deck = Deck("discard")
-
-        # Shuffle all decks
-        self.draw_deck.shuffle()
-        self.discard_deck.shuffle()
+        self.discard_deck = Deck()
+        self.draw_deck = Deck("draw", False, self.discard_deck) # Final product will have this as True (draw_deck should be hidden)
 
         # Determines which player is "destined" to be attacked during the encounter
-        self.destiny_draw_deck = Deck("destiny", False)
         self.destiny_discard_deck = Deck()
+        self.destiny_draw_deck = Deck("destiny", False, self.destiny_discard_deck, self.players)
+
+        # Decks are automatically shuffled on creation
 
         self.warp = [] # Where "dead" ships are stored
         self.planets = []
@@ -56,10 +54,7 @@ class Game:
         # Randomize the order of play
         random.shuffle(self.players)
 
-        # Now that there are players, fill the destiny deck with 10 cards per person
-        for player in self.players:
-            self.destiny_draw_deck.cards += [Card("destiny", player.name, player) for i in range(8)]
-        self.destiny_draw_deck.shuffle()
+        # self.players is ordered in the order of play (first on the list goes first)
 
         # Initialize each player with five home planets
         for player in self.players:
@@ -71,59 +66,81 @@ class Game:
 
         # Control of flow variables
         self.phase = "start_turn"
+
+        # Will either be 1 or 2 (player may elect for a second encounter), resets on each turn
+        self.encounter = 1
+
         self.offense = None
         self.offense_card = None
         self.defense = None
         self.defense_card = None
+        self.defense_planet = None
+
+        # An ordering of players based on number of foreign colonies (5 to win)
+        self.ranking = []
+
+        # Used to display to happenings of each encounter in the console
+        self.output = ""
+
         self.winner = None
         self.is_over = False
-        self.encounter = 1
-        self.ranking = []
-        self.output = ""
-        self.defense_planet = None
 
         # Sets home planets for each player
         for player in self.players:
             player.home_planets = self.home_planets(player)
 
+        # A little guidance for navigating the console
+        print("<Enter> to advance.\n")
+
+        # This is the main while loop where an entire encounter is cycled through
         while not self.is_over:
             self.output = ""
             input("New Encounter")
 
         # Start turn phase
-            self.set_ranking()
-
             self.phase = "Start Turn"
+
+            # Prints state of the game, which includes visible decks and players (their hands and planets)
             print(self)
             print("Phase: " + self.phase + "\n")
 
             if self.encounter == 1:
-                self.offense = self.players[0] # If new offense for this encounter
+                self.offense = self.players[0]  # Selects new offense for this encounter
 
             # Fanciest line of code in whole program
             # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
+            self.set_ranking()
             self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking])
 
             self.output += "\n\nOffense: " + self.offense.name + "\n"
+
             print(self.output)
 
             input()
+
         # Destiny phase
             self.phase = "Destiny"
+
             print(self)
             print("Phase: " + self.phase + "\n")
 
             # Draw next destiny card, assign defense
-            self.destiny_card = self.destiny_draw_deck.draw(self.discard_deck)
-            self.defense = self.desinty_card.other  # Should be of type Player
+            self.destiny_card = self.destiny_draw_deck.draw()
+
+            # If offense draws his/herself for a destiny (player to attack)
+            while self.destiny_card.other == self.offense:
+
+                # Discard card
+                self.destiny_discard_deck.discard(self.destiny_card)
+
+                # and redraw until they don't draw his/herself
+                self.destiny_card = self.destiny_draw_deck.draw()
+
+            # Assign the defense
+            self.defense = self.destiny_card.other
 
             # Put destiny card in destiny discard deck
-            self.destiny_discard_deck.append(self.destiny_card)
-
-            while self.defense == self.offense:
-                self.destiny_card = self.destiny_draw_deck.draw(self.discard_deck)
-                self.defense = self.desinty_card.other
-                self.destiny_discard_deck.append(self.destiny_card)
+            self.destiny_discard_deck.discard(self.destiny_card)
 
             self.output += "Defense: " + self.defense.name + "\n\n"
             print(self.output)
@@ -135,6 +152,7 @@ class Game:
             print(self)
             print("Phase: " + self.phase + "\n")
 
+            # May change this later to select the most advantageous planet for the offense to attack
             self.defense_planet = random.choice(self.home_planets(self.defense))
 
             # Offense cannot already have ships there
@@ -382,7 +400,7 @@ class Game:
         self.ranking.sort(key = lambda x: x[1], reverse = True)
 
     def __str__(self):
-        result = "Phase: " + self.phase + "\n"
+        result = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nPhase: " + self.phase + "\n"
         for player in self.players:
             result += str(player)
         result += str(self.draw_deck)
@@ -429,30 +447,39 @@ class Player:
 
 
 class Deck:
-    def __init__(self, type = "none", hidden = False):
+    def __init__(self, type = "none", hidden = False, discard_deck = None, other = None):
         self.cards = []
         self.type = type
         self.hidden = hidden
         self.empty = True
+        self.discard_deck = discard_deck
 
-        # Draw deck initialized with attack cards 0-19, 5 negotiates
+        # Draw deck initialized with doubles of attack cards 0-15, one copy of attack cards 16-30, 10 negotiates
         if type == "draw":
             self.empty = False
             self.cards += [Card("attack", i) for i in range(0, 30)]
             self.cards += [Card("attack", i) for i in range(0, 15)]
-            self.cards += [Card("negotiate", 0) for i in range(0, 5)]
+            self.cards += [Card("negotiate", 0) for i in range(0, 10)]
 
+        # Destiny decks will have five cards of each player, should be initialized with other = list of players in game
         if type == "destiny":
             self.empty = False
 
-        # The discard deck will be initialized as empty
+            players = other
+            for player in players:
+                self.cards += [Card("destiny", player.name, player) for i in range(5)]
+
+        self.shuffle()
+
+        # The discard decks will be initialized as empty
 
     # Removes first card in Deck and returns it
-    def draw(self, discard_deck):
+    def draw(self):
+        # Replenish deck if empty
         if self.empty:
-            self.cards = discard_deck.cards
             self.reshuffle()
-            discard_deck.cards = []
+
+        # At this point, deck should not be empty
         self.empty = len(self.cards) - 1 == 0
         return self.cards.pop()
 
@@ -469,10 +496,16 @@ class Deck:
     # Discarded cards are added back in and shuffled
     def reshuffle(self):
         empty = False
+
         if self.type == "draw":
-            self = Deck("draw")
+            self.cards = self.discard_deck.cards
+            self.discard_deck.cards = []
+
         elif self.type == "destiny":
-            self.cards
+            self.cards = self.discard_deck.cards
+            self.discard_deck.cards = []
+
+        self.shuffle()
 
     # Used for printing out the cards in the deck
     def __str__(self):
