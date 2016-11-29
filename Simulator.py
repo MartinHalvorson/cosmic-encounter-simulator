@@ -488,7 +488,7 @@ class Game:
 
         try:
             self.defense.hand.remove(return_card)
-        except:
+        except: 
             print(return_card)
             for card in self.defense.hand:
                 print(card)
