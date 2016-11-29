@@ -482,17 +482,15 @@ class Game:
 
         else:
             # Randomly select card for defense
-            return_card = random.choice(self.defense.hand)
-            if not return_card.is_encounter_card():
-                return_card = self.select_defense_encounter_card()
+            while return_card is None:
+                card = random.choice(self.defense.hand)
+                if card.is_encounter_card():
+                    return_card = card
 
         try:
             self.defense.hand.remove(return_card)
-        except: 
-            print(return_card)
-            for card in self.defense.hand:
-                print(card)
-            raise Exception("Card not removed.")
+        except:
+            raise Exception("Cannot remove card from defense's hand.")
         return return_card
 
     def check_if_over(self):

@@ -3,7 +3,7 @@ import Simulator
 
 winner_count = {}
 
-for i in range(10):
+for i in range(1000):
     sim = Simulator.Simulator([
         {"name": "Alvin", "power": "None"},
         {"name": "Brady", "power": "None"},
