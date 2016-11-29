@@ -55,6 +55,10 @@ class Game:
         self.destiny_discard_deck = Deck()
         self.destiny_draw_deck = Deck("destiny", False, self.destiny_discard_deck, self.players)
 
+        # Determines which player is "destined" to be attacked during the encounter
+        self.rewards_discard_deck = Deck()
+        self.rewards_draw_deck = Deck("rewards", False, self.rewards_discard_deck, self.players)
+
         # Decks are automatically shuffled on creation
 
         # Initialize each player with five home planets
@@ -78,7 +82,8 @@ class Game:
         self.defense_planet = None
 
         # An ordering of players based on number of foreign colonies (5 to win)
-        self.ranking = []
+        self.ranking = {}
+        self.ordered_ranking = []
 
         # Used to display to happenings of each encounter in the console
         self.output = ""
@@ -120,12 +125,10 @@ class Game:
             if self.encounter == 1:
                 self.offense = self.players[0]  # Selects new offense for this encounter
 
-            # Fanciest line of code in whole program
-            # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
             self.set_ranking()
 
             if step_through:
-                self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ranking])
+                self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ordered_ranking])
 
                 self.output += "\n\nOffense: " + self.offense.name + "\n"
 
@@ -186,13 +189,7 @@ class Game:
 
             self.offense_ships = {self.offense.name: offense_ships_chosen}
 
-            # Remove appropriate number of ships from offense's (home) planets
-            for i in range(offense_ships_chosen):
-                planet = random.choice(self.home_planets(self.offense))
-                if planet.ships.get(self.offense.name, 0) > 1:
-                    planet.ships[self.offense.name] -= 1
-                else:
-                    i -= 1
+            self.take_ships(self.offense, offense_ships_chosen)
 
             # Ships defense is sending into the encounter
             self.defense_ships = {self.defense.name: self.defense_planet.ships.get(self.defense.name, 0)}
@@ -214,14 +211,27 @@ class Game:
                 print(self)
                 print("Phase: " + self.phase + "\n")
 
-            # Fill in invited logic
             self.offense_allies = []
             self.defense_allies = []
+
+            # Offense logically invites anyone equal or less than them
+
+            offense_num_planets = self.ranking.get(self.offense.name, 0)
+            for player in self.players:
+                if player is not self.offense and player is not self.defense:
+                    if self.ranking.get(player.name, 0) <= offense_num_planets:
+                        self.offense_allies.append(player)
+
+            # Defense invites are random for now
+            for player in self.players:
+                if player is not self.offense and player is not self.defense:
+                    if random.randint(0, 1) == 1:
+                        self.defense_allies.append(player)
 
             # Determines and prints offensive invitees
             if step_through:
                 self.output += "Offense invites:\n"
-                if self.offense_allies == []:
+                if self.offense_allies is []:
                     self.output += "\t<No one invited>\n"
                 else:
                     for invitee in self.offense_allies:
@@ -229,8 +239,8 @@ class Game:
 
             # Determines and prints defensive invitees
             if step_through:
-                self.output += "\nDefense invites:\n "
-                if self.defense_allies == []:
+                self.output += "\nDefense invites:\n"
+                if self.defense_allies is []:
                     self.output += "\t<No one invited>\n"
                 else:
                     for invitee in self.defense_allies:
@@ -255,7 +265,19 @@ class Game:
                         if step_through:
                             self.output += player.name + " doesn't join either side.\n"
 
+            # Add in ships for allies
+            for player in self.players:
+                if player in self.offense_allies:
+                    self.take_ships(player, 2)
+                    self.offense_ships[player.name] = 2
+                if player in self.defense_allies:
+                    self.take_ships(player, 2)
+                    self.defense_ships[player.name] = 2
+
             if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
+
                 print(self.output)
 
                 input()
@@ -428,21 +450,14 @@ class Game:
         for i in range(8):
             player.hand.append(self.draw_deck.draw())
 
-    # Returns list of home planets of input player
-    def home_planets(self, player):
-        result = []
-        for planet in self.planets:
-            if planet.owner == player:
-                result.append(planet)
-        return result
-
-    def return_ships(self, player, num_ships):
-        for i in range(num_ships):
-            planet = random.choice(player.home_planets)
-            if planet.ships.get(player.name, 0) > 0:
-                planet.ships[player.name] = planet.ships[player.name] + 1
-            else:
-                i -= 1
+    # Removes num_of_cards from player1 and gives them to player2
+    def take_cards(self, player1, player2, num_of_cards):
+        for i in range(num_of_cards):
+            if len(player2.hand) > 0:
+                chosen_card = random.choice(player2.hand)
+                player2.hand.remove(chosen_card)
+                player1.hand.append(chosen_card)
+                self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
 
     def select_offense_encounter_card(self):
 
@@ -498,13 +513,38 @@ class Game:
             if self.num_of_foreign_colonies(player) == 5:
                 self.is_over = True
 
-    def take_cards(self, player1, player2, num_of_cards):
-        for i in range(num_of_cards):
-            if len(player2.hand) > 0:
-                chosen_card = random.choice(player2.hand)
-                player2.hand.remove(chosen_card)
-                player1.hand.append(chosen_card)
-                self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
+    def take_ships(self, player, num_ships):
+        # Remove appropriate number of ships from offense's (home) planets
+        for i in range(num_ships):
+            planet = random.choice(self.home_planets(player))
+            if planet.ships.get(player.name, 0) > 1:
+                planet.ships[player.name] -= 1
+            else:
+                i -= 1
+
+    def return_ships(self, player, num_ships):
+        for i in range(num_ships):
+            planet = random.choice(player.home_planets)
+            if planet.ships.get(player.name, 0) > 0:
+                planet.ships[player.name] = planet.ships[player.name] + 1
+            else:
+                i -= 1
+
+                # Returns list of home planets of input player
+                def home_planets(self, player):
+                    result = []
+                    for planet in self.planets:
+                        if planet.owner == player:
+                            result.append(planet)
+                    return result
+
+    # Returns list of home planets of input player
+    def home_planets(self, player):
+        result = []
+        for planet in self.planets:
+            if planet.owner == player:
+                result.append(planet)
+        return result
 
     # Counts number of foreign colonies a player has
     def num_of_foreign_colonies(self, player):
@@ -515,8 +555,12 @@ class Game:
         return count
 
     def set_ranking(self):
-        self.ranking = [(player.name, self.num_of_foreign_colonies(player)) for player in self.players]
-        self.ranking.sort(key = lambda x: x[1], reverse = True)
+        # Fanciest lines of code in whole project
+        # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
+        self.ordered_ranking = [(player.name, self.num_of_foreign_colonies(player)) for player in self.players]
+        self.ordered_ranking.sort(key = lambda x: x[1], reverse = True)
+        for pair in self.ordered_ranking:
+            self.ranking[pair[0]] = pair[1]
 
     def __str__(self):
         result = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
@@ -531,6 +575,8 @@ class Game:
         # Add decks to output
         result += str(self.draw_deck)
         result += str(self.discard_deck)
+        result += str(self.rewards_draw_deck)
+        result += str(self.rewards_discard_deck)
         result += str(self.destiny_draw_deck)
 
         return result
@@ -599,6 +645,32 @@ class Deck:
             self.cards += [Card("negotiate", 0) for i in range(0, 10)]
             self.cards += [Card("reinforcement", i) for i in range(2, 5)]
             self.cards += [Card("reinforcement", i) for i in range(2, 5)]
+            self.cards += [Card("artifact", "cosmic zap") for i in range(2)]
+            self.cards += [Card("artifact", "card zap") for i in range(2)]
+            self.cards += [Card("artifact", "mobius tubes") for i in range(2)]
+            self.cards += [Card("artifact", "emotion control") for i in range(2)]
+            self.cards.append(Card("artifact", "force field"))
+            self.cards.append(Card("artifact", "quash"))
+
+        # Defender rewards deck
+        if type == "rewards":
+            self.empty = False
+            self.cards += [Card("attack", i) for i in range(20, 30)]
+            self.cards += [Card("attack", i) for i in range(20, 30)]
+            self.cards += [Card("negotiate", 0) for i in range(0, 4)] # Change to special negotiates later
+            self.cards += [Card("reinforcement", i) for i in range(5, 8)]
+            self.cards += [Card("reinforcement", i) for i in range(5, 8)]
+            self.cards += [Card("kicker", i) for i in range(-1, 5)]
+            self.cards.append(Card("artifact", "cosmic zap"))
+            self.cards.append(Card("artifact", "card zap"))
+            self.cards.append(Card("artifact", "omni-zap"))
+            self.cards.append(Card("artifact", "solar wind"))
+            self.cards.append(Card("artifact", "rebirth"))
+            self.cards.append(Card("artifact", "ship zap"))
+            self.cards.append(Card("artifact", "hand zap"))
+            #self.cards.append(Card("artifact", "finder"))
+            self.cards.append(Card("artifact", "space junk"))
+            self.cards.append(Card("artifact", "victory boon"))
 
         # Destiny decks will have five cards of each player, should be initialized with other = list of players in game
         if type == "destiny":
@@ -655,6 +727,8 @@ class Deck:
             result = "Draw Deck:\n"
         elif self.type == "destiny":
             result = "Destiny Deck:\n"
+        elif self.type == "rewards":
+            result = "Rewards Deck:\n"
 
         # Adds cards to return string if not hidden
         if self.empty:
@@ -665,7 +739,7 @@ class Deck:
             count = 0
             for card in self.cards:
                 count += 1
-                num_cards_shown = 5
+                num_cards_shown = 3
                 result += "\t" + str(card)
                 if count == num_cards_shown and (len(self.cards) > num_cards_shown):
                     result += "\t<plus " + str(len(self.cards) - num_cards_shown) + " more>\n"
