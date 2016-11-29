@@ -268,36 +268,21 @@ class Game:
                 print("Phase: " + self.phase + "\n")
 
             # Provides new hand for offense if he/she needs one
-            if len(self.offense.hand) == 0:
+            if len(self.offense.hand) == 0 or not self.offense.has_encounter_card():
                 self.deal_hand(self.offense)
                 if step_through:
                     self.output += "\n" + self.offense.name + " draws a new hand.\n"
 
             # Select max value card for offense
-            self.offense_card = self.offense.hand[0]
-            for card in self.offense.hand:
-                if card.value > self.offense_card.value:
-                    self.offense_card = card
-            self.offense.hand.remove(self.offense_card)
+            self.offense_card = self.select_offense_encounter_card()
 
             # Provides new hand for defense if he/she needs one
-            if len(self.defense.hand) == 0:
+            if len(self.defense.hand) == 0 or not self.defense.has_encounter_card():
                 self.deal_hand(self.defense)
                 if step_through:
                     self.output += "\n" + self.defense.name + " draws a new hand.\n"
 
-            # "def-neg" strategy is to play a negotiate as defense to obtain more cards
-            if self.defense.strategy == "def-neg":
-                # Select a negotiate if there is one
-                self.defense_card = self.defense.hand[0]
-                for card in self.defense.hand:
-                    if card.type == "negotiate":
-                        self.defense_card = card
-                self.defense.hand.remove(self.defense_card)
-            else:
-                # Randomly select card for defense
-                self.defense_card = random.choice(self.defense.hand)
-                self.defense.hand.remove(self.defense_card)
+            self.defense_card = self.select_defense_encounter_card()
 
             if step_through:
                 print(self.output)
@@ -404,7 +389,7 @@ class Game:
                     self.warp[player.name] = 0
 
             # Prevent offense from going a third time or going again if they lost
-            if ((self.encounter == 1 and self.encounter_winner == self.offense) or self.offense.power == "Machine") and self.has_encounter_card(self.offense):
+            if ((self.encounter == 1 and self.encounter_winner == self.offense) or self.offense.power == "Machine") and self.offense.has_encounter_card():
                 self.encounter = 2
             else:
                 self.players.append(self.players.pop(0))
@@ -459,11 +444,56 @@ class Game:
             else:
                 i -= 1
 
-    def has_encounter_card(self, player):
-        for card in player.hand:
-            if card.type == "attack" or card.type == "negotiate":
-                return True
-        return False
+    def select_offense_encounter_card(self):
+
+        # Throw exception if offense doesn't have encounter card
+        if not self.offense.has_encounter_card:
+            raise Exception("Offense doesn't have encounter card.")
+
+        return_card = None
+
+        for card in self.offense.hand:
+            if return_card is None and card.is_encounter_card():
+                return_card = card
+
+            # Makes sure reinforcement is not selected as encounter card
+            if card.is_encounter_card() and card.value > return_card.value:
+                    return_card = card
+
+        self.offense.hand.remove(return_card)
+        return return_card
+
+    def select_defense_encounter_card(self):
+
+        # Throw exception if defense doesn't have encounter card
+        if not self.defense.has_encounter_card():
+            raise Exception("Defense doesn't have encounter card.")
+
+        return_card = None
+
+        # "def-neg" strategy is to play a negotiate as defense to obtain more cards
+        if self.defense.strategy == "def-neg":
+            # Select a negotiate if there is one
+            for card in self.defense.hand:
+                if return_card is None and card.is_encounter_card():
+                    return_card = card
+                if card.type == "negotiate":
+                    return_card = card
+
+        else:
+            # Randomly select card for defense
+            return_card = random.choice(self.defense.hand)
+            if not return_card.is_encounter_card():
+                return_card = self.select_defense_encounter_card()
+
+        try:
+            self.defense.hand.remove(return_card)
+        except:
+            print(return_card)
+            for card in self.defense.hand:
+                print(card)
+            raise Exception("Card not removed.")
+        return return_card
 
     def check_if_over(self):
         for player in self.players:
@@ -526,6 +556,12 @@ class Player:
         # Game finishes once a player or multiple players reach five foreign colonies
         self.home_planets = []
 
+    def has_encounter_card(self):
+        for card in self.hand:
+            if card.is_encounter_card():
+                return True
+        return False
+
     # Used for printing out a player
     def __str__(self):
         result = "Player: " + self.name + " \t" + self.power + " \t" + self.color + "\n"
@@ -557,12 +593,14 @@ class Deck:
         self.empty = True
         self.discard_deck = discard_deck
 
-        # Draw deck initialized with doubles of attack cards 0-15, one copy of attack cards 16-30, 10 negotiates
+        # Draw deck will be initialized with attack, negotiate, and reinforcement cards
         if type == "draw":
             self.empty = False
             self.cards += [Card("attack", i) for i in range(0, 30)]
             self.cards += [Card("attack", i) for i in range(0, 15)]
             self.cards += [Card("negotiate", 0) for i in range(0, 10)]
+            self.cards += [Card("reinforcement", i) for i in range(2, 5)]
+            self.cards += [Card("reinforcement", i) for i in range(2, 5)]
 
         # Destiny decks will have five cards of each player, should be initialized with other = list of players in game
         if type == "destiny":
@@ -570,7 +608,7 @@ class Deck:
 
             players = other
             for player in players:
-                self.cards += [Card("destiny", player.name, player) for i in range(5)]
+                self.cards += [Card("destiny", player.name, player) for i in range(3)]
 
         self.shuffle()
 
@@ -584,7 +622,7 @@ class Deck:
 
         # At this point, deck should not be empty
         self.empty = len(self.cards) - 1 == 0
-        return self.cards.pop()
+        return self.cards.pop(0)
 
     # Accepts card and adds it to the top of the deck
     def discard(self, card):
@@ -642,6 +680,9 @@ class Card:
         self.type = type
         self.value = value
         self.other = other
+
+    def is_encounter_card(self):
+        return self.type == "negotiate" or self.type == "attack"
 
     # Used for printing out the type of card
     def __str__(self):
