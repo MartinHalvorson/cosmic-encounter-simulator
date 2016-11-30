@@ -20,6 +20,9 @@ class Game:
 
         self.powers = ["Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
+        # Masochist - can win if it has no ships left in the game
+        # Symbiote - starts with double (40) the number of ships
+        # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
         # Warpish - adds the total number of ships in the warp to total score (as main player)
         # Zombie - cannot lose ships to the warp
@@ -424,12 +427,12 @@ class Game:
                 # Tripler Alien Power
                 if self.offense.power == "Tripler":
                     if offense_value >= 10:
-                        offense_value = int(offense_value / 3)
+                        offense_value = int((offense_value + 2) / 3) # Rounds up
                     else:
                         offense_value = int(offense_value * 3)
                 if self.defense.power == "Tripler":
                     if defense_value >= 10:
-                        defense_value = int(defense_value / 3)
+                        defense_value = int((defense_value + 2) / 3) # Rounds up
                     else:
                         defense_value = int(defense_value * 3)
 
