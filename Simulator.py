@@ -421,6 +421,18 @@ class Game:
 
             # Both drop attack cards
             else:
+                # Tripler Alien Power
+                if self.offense.power == "Tripler":
+                    if offense_value >= 10:
+                        offense_value = int(offense_value / 3)
+                    else:
+                        offense_value = int(offense_value * 3)
+                if self.defense.power == "Tripler":
+                    if defense_value >= 10:
+                        defense_value = int(defense_value / 3)
+                    else:
+                        defense_value = int(defense_value * 3)
+
                 # Virus Alien Power (multiplies card value by number of ships)
                 if self.offense.power == "Virus":
                     offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)

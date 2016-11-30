@@ -9,15 +9,15 @@ power_wins = {}
 # Keeps track of total games played by each power
 power_count = {}
 
-num_games_simulated = 10
+num_games_simulated = 20
 
 for i in range(num_games_simulated):
     sim = Simulator.Simulator([
-        {"name": "Alvin", "power": "Machine"},
-        {"name": "Brady", "power": "Tripler"},
-        {"name": "Charlie", "power": "Masochist"},
-        {"name": "Donnie", "power": "Warpish"},
-        {"name": "Martin", "power": "None"}
+        {"name": "Alvin"},
+        {"name": "Brady"},
+        {"name": "Charlie"},
+        {"name": "Donnie"},
+        {"name": "Martin"}
         ], False)
     for player in sim.game.players:
         if player in sim.game.game_winners:
