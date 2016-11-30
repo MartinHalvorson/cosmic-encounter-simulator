@@ -139,10 +139,6 @@ class Game:
         # Destiny phase
             self.phase = "Destiny"
 
-            if step_through:
-                print(self)
-                print("Phase: " + self.phase + "\n")
-
             # Draw next destiny card, assign defense
             self.destiny_card = self.destiny_draw_deck.draw()
 
@@ -162,6 +158,9 @@ class Game:
             self.destiny_discard_deck.discard(self.destiny_card)
 
             if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
+
                 self.output += "Defense: " + self.defense.name + "\n\n"
                 print(self.output)
 
@@ -169,10 +168,6 @@ class Game:
 
         # Launch phase
             self.phase = "Launch"
-
-            if step_through:
-                print(self)
-                print("Phase: " + self.phase + "\n")
 
             # May change this later to select the most advantageous planet for the offense to attack
             self.defense_planet = random.choice(self.home_planets(self.defense))
@@ -197,6 +192,9 @@ class Game:
             # In the event of the defense losing, defense ships will be removed in the resolution stage
 
             if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
+
                 self.output += "Defense " + str(self.defense_planet) + "\n"
                 self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
                 self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
@@ -207,19 +205,14 @@ class Game:
         # Alliance phase
             self.phase = "Alliance"
 
-            if step_through:
-                print(self)
-                print("Phase: " + self.phase + "\n")
-
             self.offense_allies = []
             self.defense_allies = []
 
             # Offense logically invites anyone equal or less than them
-
-            offense_num_planets = self.ranking.get(self.offense.name, 0)
+            self.offense_num_planets = self.num_of_foreign_colonies(self.offense)
             for player in self.players:
                 if player is not self.offense and player is not self.defense:
-                    if self.ranking.get(player.name, 0) <= offense_num_planets:
+                    if self.ranking.get(player.name, 0) <= self.offense_num_planets:
                         self.offense_allies.append(player)
 
             # Defense invites are random for now
@@ -230,8 +223,11 @@ class Game:
 
             # Determines and prints offensive invitees
             if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
+
                 self.output += "Offense invites:\n"
-                if self.offense_allies is []:
+                if self.offense_allies == []:
                     self.output += "\t<No one invited>\n"
                 else:
                     for invitee in self.offense_allies:
@@ -240,13 +236,24 @@ class Game:
             # Determines and prints defensive invitees
             if step_through:
                 self.output += "\nDefense invites:\n"
-                if self.defense_allies is []:
+                if self.defense_allies == []:
                     self.output += "\t<No one invited>\n"
                 else:
                     for invitee in self.defense_allies:
                         self.output += invitee.name + "\n"
 
                 self.output += "\n"
+
+            # For players invited to both sides, logic to chose to side with offense or defense
+            for player in self.players:
+                if player is not self.offense and player is not self.defense:
+                    if player in self.offense_allies and player in self.defense_allies:
+                        if self.offense_num_planets == 4 and not self.num_of_foreign_colonies(player) == 4:
+                            # Sides with defense
+                            self.offense_allies.remove(player)
+                        else:
+                            # Sides with offense
+                            self.defense_allies.remove(player)
 
             # Determines and prints which players join which side
             for player in self.players:
@@ -285,10 +292,6 @@ class Game:
         # Planning phase
             self.phase = "Planning"
 
-            if step_through:
-                print(self)
-                print("Phase: " + self.phase + "\n")
-
             # Provides new hand for offense if he/she needs one
             if len(self.offense.hand) == 0 or not self.offense.has_encounter_card():
                 self.deal_hand(self.offense)
@@ -307,6 +310,12 @@ class Game:
             self.defense_card = self.select_defense_encounter_card()
 
             if step_through:
+                print(self)
+                print("Phase: " + self.phase + "\n")
+
+                self.output += "\nOffense card selected.\n"
+                self.output += "Defense card selecetd.\n"
+
                 print(self.output)
 
                 input()
@@ -337,41 +346,65 @@ class Game:
 
             # Both drop negotiates
             if offense_value == 0 and defense_value == 0:
+                # Add offense's ships to defender's planet
                 self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
 
                 # Add defensive ships to one of offense's home planets
+                # Choose random planet from defense
                 new_planet_for_defense = random.choice(self.offense.home_planets)
+                # Rechoose if offense is already on that planet (wouldn't be gaining a colony)
                 while new_planet_for_defense.ships.get(self.defense.name, 0) != 0:
                     new_planet_for_defense = random.choice(self.offense.home_planets)
-
+                # Place offense's ships on chosen planet
                 new_planet_for_defense.ships[self.defense.name] = self.defense_ships.get(self.defense.name, 0)
+
+                # Return allies' ships
+                for player in self.offense_allies:
+                    self.return_ships(player, self.offense_ships.get(player.name, 0))
+                for player in self.defense_allies:
+                    self.return_ships(player, self.defense_ships.get(player.name, 0))
+
+                self.encounter_winner = self.offense
 
                 if step_through:
                     self.output += "Colony swap occurred.\n"
 
-                self.encounter_winner = self.offense
-                pass
-
             # Offense dropped negotiate
             elif offense_value == 0:
+                # Offense ships to warp
+                for name in self.offense_ships.keys():
+                    self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+
                 # Offense gets cards from defense
                 self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
-                self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
+
+                # Defensive allies draw rewards (card per number of ship)
+                for player in self.defense_allies:
+                    self.draw_rewards(player, self.defense_ships.get(player.name, 0))
+
                 if step_through:
                     self.output += "\nDefense wins, offense draws cards.\n"
                 self.encounter_winner = self.defense
 
             # Defense dropped negotiate
             elif defense_value == 0:
-                # Add offense's ships
-                self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
+                # Send defender's ships to the warp
                 self.defense_planet.ships[self.defense.name] = 0
-                self.encounter_winner = self.offense
-                self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
 
+                # Move offense's and allies' ships to the planet
+                for name in self.offense_ships.keys():
+                    self.defense_planet.ships[name] = self.defense_planet.get(name, 0) + self.offense_ships.get(name, 0)
+
+                # Move defensive allies' ships to the warp
+                for name in self.defense_ships.keys():
+                    if not name == self.defense.name:
+                        self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
 
                 # Defense gets cards from offense
                 self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
+
+                self.encounter_winner = self.offense
+
                 if step_through:
                     self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
 
@@ -391,15 +424,36 @@ class Game:
 
                 # Determines encounter winner
                 if offense_value > defense_value:
-                    if step_through:
-                        self.output += "Offense wins and lands on the colony.\n"
-                    self.encounter_winner = self.offense
+                    # Remove defender's ships and send to warp
                     self.defense_planet.ships[self.defense.name] = 0
                     self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
 
-                    for player in self.offense_ships:
-                        self.defense_planet.ships[self.offense.name] = self.offense_ships.get(self.offense.name, 0)
+                    # Move offense and allies to planet
+                    for name in self.offense_ships.keys():
+                        self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
+
+                    # Move defensive allies' ships to the warp
+                    # Note: defender's ships have already been moved
+                    for name in self.defense_ships.keys():
+                        if not name == self.defense.name:
+                            self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
+
+                    self.encounter_winner = self.offense
+
+                    if step_through:
+                        self.output += "Offense wins and lands on the colony.\n"
+
                 else:
+                    # Defense ships draw rewards
+                    for player in self.defense_allies:
+                        self.draw_rewards(player, self.defense_ships.get(player.name, 0))
+
+                    # Offense ships to warp
+                    for name in self.offense_ships.keys():
+                        self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+
+                    # Defender ships stay on planet
+
                     if step_through:
                         self.output += "Defense wins.\n"
                     self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
@@ -449,6 +503,11 @@ class Game:
     def deal_hand(self, player):
         for i in range(8):
             player.hand.append(self.draw_deck.draw())
+
+    # Draw rewards from the rewards deck for winning as ally on defense
+    def draw_rewards(self, player, num_of_cards):
+        for i in range(num_of_cards):
+            player.hand.append(self.rewards_draw_deck.draw())
 
     # Removes num_of_cards from player1 and gives them to player2
     def take_cards(self, player1, player2, num_of_cards):
