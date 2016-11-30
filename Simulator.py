@@ -18,13 +18,14 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Machine", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Machine", "Masochist", "Tripler", "Virus", "Warpish", "Zombie", "None"]
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
+        # Warpish - adds the total number of ships in the warp to total score (as main player)
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Loser, Filch, Reserve, Vulch, Macron, Virus, Tripler, Masochist, Warpish, Symbiote
+        # Loser, Filch, Reserve, Vulch, Macron, Warpish, Symbiote
 
         # Initializing players
         self.players = []
@@ -184,7 +185,7 @@ class Game:
             # Ships offense is sending into the encounter
             offense_ships_chosen = 3
 
-            if self.offense.power == "Zombie":
+            if self.offense.power in ["Masochist", "Zombie"]:
                 offense_ships_chosen = 4
 
             self.offense_ships = {self.offense.name: offense_ships_chosen}
@@ -278,7 +279,7 @@ class Game:
 
             self.default_ally_ships_sent = 2
 
-            if player.power == "Zombie":
+            if player.power in ["Masochist", "Zombie"]:
                 self.default_ally_ships_sent = 4
 
             # Add in ships for allies
@@ -515,11 +516,7 @@ class Game:
             if step_through:
                 input()
 
-        # Game Over, determining winners
-        for player in self.players:
-            if self.num_of_foreign_colonies(player) == 5:
-                self.game_winners.append(player)
-
+        # People at five colonies should have been added in self.is_over()
         # If player won without reaching five colonies, he/she may have already been added to winners
 
     # Deals out eight cards to a player
@@ -547,18 +544,7 @@ class Game:
         if not self.offense.has_encounter_card:
             raise Exception("Offense doesn't have encounter card.")
 
-        return_card = None
-
-        for card in self.offense.hand:
-            if return_card is None and card.is_encounter_card():
-                return_card = card
-
-            # Makes sure reinforcement is not selected as encounter card
-            if card.is_encounter_card() and card.value > return_card.value:
-                    return_card = card
-
-        self.offense.hand.remove(return_card)
-        return return_card
+        return self.offense.select_max()
 
     def select_defense_encounter_card(self):
 
@@ -566,34 +552,27 @@ class Game:
         if not self.defense.has_encounter_card():
             raise Exception("Defense doesn't have encounter card.")
 
-        return_card = None
-
         # "def-neg" strategy is to play a negotiate as defense to obtain more cards
         if self.defense.strategy == "def-neg":
-            # Select a negotiate if there is one
-            for card in self.defense.hand:
-                if return_card is None and card.is_encounter_card():
-                    return_card = card
-                if card.type == "negotiate":
-                    return_card = card
+            return_card = self.defense.select_negotiate()
+            if not (return_card is None):
+                return return_card
+            else:
+                return self.defense.select_max()
 
+        # Default card for defense is third highest (save highest two for couple attacks)
         else:
-            # Randomly select card for defense
-            while return_card is None:
-                card = random.choice(self.defense.hand)
-                if card.is_encounter_card():
-                    return_card = card
-
-        try:
-            self.defense.hand.remove(return_card)
-        except:
-            raise Exception("Cannot remove card from defense's hand.")
-        return return_card
+            # Select third highest attack card
+            return self.defense.select_n_highest(3)
 
     def check_if_over(self):
         for player in self.players:
             if self.num_of_foreign_colonies(player) == 5:
                 self.is_over = True
+                self.game_winners.append(player)
+            if player.power == "Masochist" and self.warp.get(player.name, 0) == 20:
+                self.is_over = True
+                self.game_winners.append(player)
 
     def take_ships(self, player, num_ships):
         # Remove appropriate number of ships from offense's (home) planets
@@ -687,6 +666,57 @@ class Player:
             if card.is_encounter_card():
                 return True
         return False
+
+    # Pops max attack card from player's hand and returns it
+    def select_max(self):
+
+        return_card = None
+
+        for card in self.hand:
+            if card.is_encounter_card():
+                if return_card is None:
+                    return_card = card
+                if card.value > return_card.value:
+                    return_card = card
+
+        return return_card
+
+    # Pops min attack card from player's hand and returns it
+    def select_min(self):
+
+        return_card = None
+
+        for card in self.hand:
+            if return_card is None and card.is_encounter_card():
+                return_card = card
+            if card.value < return_card.value and not card.type == "negotiate":
+                return_card = card
+
+        return return_card
+
+    # Pops negotiate from player's hand if there is one and returns it; else returns None
+    def select_negotiate(self):
+
+        return_card = None
+
+        for card in self.hand:
+            if return_card is None and card.is_encounter_card():
+                return_card = card
+            if card.type == "negotiate":
+                return_card = card
+
+        return return_card
+
+    # Selects n highest card from player's hand and returns it
+    def select_n_highest(self, n):
+
+        encounter_cards = [(card, card.value) for card in self.hand if card.is_encounter_card()]
+        encounter_cards.sort(key=lambda x: x[1], reverse = True)
+
+        if n < len(encounter_cards):
+            return encounter_cards[n - 1][0]
+        else:
+            return encounter_cards[len(encounter_cards) - 1][0]
 
     # Used for printing out a player
     def __str__(self):
