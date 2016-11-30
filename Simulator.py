@@ -18,7 +18,7 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Machine", "Masochist", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
         # Warpish - adds the total number of ships in the warp to total score (as main player)
@@ -884,7 +884,10 @@ class Card:
 
 class Planet:
     def __init__(self, player, players):
-        self.ships = {player.name: 4}
+        if player.power == "Symbiote":
+            self.ships = {player.name: 8}
+        else:
+            self.ships = {player.name: 4}
         self.owner = player
         self.players = players
 

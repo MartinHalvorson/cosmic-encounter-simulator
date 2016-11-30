@@ -31,7 +31,7 @@ player_win_list = [(player.name, player_wins.get(player.name, 0) / num_games_sim
 # Sort so winningest players are first
 player_win_list.sort(key=lambda x: x[1], reverse=True)
 for player_tuple in player_win_list:
-    print(player_tuple[0] + ": " + str(100 * player_tuple[1]))
+    print(player_tuple[0] + ": " + str(round(100 * player_tuple[1], 1)))
 
 # Display winning percentages for each power
 print("\nAlien Power Win Percentages:")
@@ -41,7 +41,7 @@ for tuple in power_count.items():
 # Sort so winningest alien powers are first
 power_win_list.sort(key=lambda x: x[1], reverse=True)
 for power_tuple in power_win_list:
-    print(power_tuple[0] + ": " + str(100 * power_tuple[1]))
+    print(power_tuple[0] + ": " + str(round(100 * power_tuple[1], 1)))
 
 
 '''
