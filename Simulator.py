@@ -49,15 +49,15 @@ class Game:
 
         # Draw and discard decks for main deck (encounter cards, flares, artifacts, ...)
         self.discard_deck = Deck()
-        self.draw_deck = Deck("draw", False, self.discard_deck)  # Final product will have this as True (draw_deck should be hidden)
+        self.draw_deck = Deck("draw", True, self.discard_deck)  # Final product will have this as True (draw_deck should be hidden)
 
         # Determines which player is "destined" to be attacked during the encounter
         self.destiny_discard_deck = Deck()
-        self.destiny_draw_deck = Deck("destiny", False, self.destiny_discard_deck, self.players)
+        self.destiny_draw_deck = Deck("destiny", True, self.destiny_discard_deck, self.players)
 
         # Determines which player is "destined" to be attacked during the encounter
         self.rewards_discard_deck = Deck()
-        self.rewards_draw_deck = Deck("rewards", False, self.rewards_discard_deck, self.players)
+        self.rewards_draw_deck = Deck("rewards", True, self.rewards_discard_deck, self.players)
 
         # Decks are automatically shuffled on creation
 
@@ -213,7 +213,12 @@ class Game:
             for player in self.players:
                 if player is not self.offense and player is not self.defense:
                     if self.ranking.get(player.name, 0) <= self.offense_num_planets:
-                        self.offense_allies.append(player)
+                        # Offense invites fewer people if going for fifth, respect the solo win
+                        if self.offense_num_planets == 4:
+                            if random.randint(1, 3) == 1:
+                                self.offense_allies.append(player)
+                        else:
+                            self.offense_allies.append(player)
 
             # Defense invites are random for now
             for player in self.players:
@@ -246,7 +251,7 @@ class Game:
 
             # For players invited to both sides, logic to chose to side with offense or defense
             for player in self.players:
-                if player is not self.offense and player is not self.defense:
+                if not (player is self.offense or player is self.defense):
                     if player in self.offense_allies and player in self.defense_allies:
                         if self.offense_num_planets == 4 and not self.num_of_foreign_colonies(player) == 4:
                             # Sides with defense
@@ -256,20 +261,14 @@ class Game:
                             self.defense_allies.remove(player)
 
             # Determines and prints which players join which side
-            for player in self.players:
-                if player != self.offense and player != self.defense:
-                    if player in self.offense_allies:
-                        if step_through:
-                            self.output += player.name + " joins the offense!\n"
-                        if player in self.defense_allies:
-                            self.defense_allies.remove(player)
-                    elif player in self.defense_allies:
-                        if step_through:
-                            self.output += player.name + " joins the defense!\n"
+            if step_through:
+                for player in self.players:
+                    if player != self.offense and player != self.defense:
                         if player in self.offense_allies:
-                            self.offense_allies.remove(player)
-                    else:
-                        if step_through:
+                            self.output += player.name + " joins the offense!\n"
+                        elif player in self.defense_allies:
+                            self.output += player.name + " joins the defense!\n"
+                        else:
                             self.output += player.name + " doesn't join either side.\n"
 
             # Add in ships for allies
@@ -314,7 +313,7 @@ class Game:
                 print("Phase: " + self.phase + "\n")
 
                 self.output += "\nOffense card selected.\n"
-                self.output += "Defense card selecetd.\n"
+                self.output += "Defense card selected.\n"
 
                 print(self.output)
 
@@ -393,7 +392,7 @@ class Game:
 
                 # Move offense's and allies' ships to the planet
                 for name in self.offense_ships.keys():
-                    self.defense_planet.ships[name] = self.defense_planet.get(name, 0) + self.offense_ships.get(name, 0)
+                    self.defense_planet.ships[name] = self.defense_planet.ships.get(name, 0) + self.offense_ships.get(name, 0)
 
                 # Move defensive allies' ships to the warp
                 for name in self.defense_ships.keys():
@@ -484,8 +483,14 @@ class Game:
                 print(self.output)
 
             # Adds encounter cards to discard pile
-            self.discard_deck.cards.append(self.offense_card)
-            self.discard_deck.cards.append(self.defense_card)
+            if self.offense_card.reward:
+                self.rewards_discard_deck.cards.append(self.offense_card)
+            else:
+                self.discard_deck.cards.append(self.offense_card)
+            if self.defense_card.reward:
+                self.rewards_discard_deck.cards.append(self.defense_card)
+            else:
+                self.discard_deck.cards.append(self.defense_card)
 
             self.check_if_over()
 
@@ -714,22 +719,23 @@ class Deck:
         # Defender rewards deck
         if type == "rewards":
             self.empty = False
-            self.cards += [Card("attack", i) for i in range(20, 30)]
-            self.cards += [Card("attack", i) for i in range(20, 30)]
-            self.cards += [Card("negotiate", 0) for i in range(0, 4)] # Change to special negotiates later
-            self.cards += [Card("reinforcement", i) for i in range(5, 8)]
-            self.cards += [Card("reinforcement", i) for i in range(5, 8)]
-            self.cards += [Card("kicker", i) for i in range(-1, 5)]
-            self.cards.append(Card("artifact", "cosmic zap"))
-            self.cards.append(Card("artifact", "card zap"))
-            self.cards.append(Card("artifact", "omni-zap"))
-            self.cards.append(Card("artifact", "solar wind"))
-            self.cards.append(Card("artifact", "rebirth"))
-            self.cards.append(Card("artifact", "ship zap"))
-            self.cards.append(Card("artifact", "hand zap"))
-            #self.cards.append(Card("artifact", "finder"))
-            self.cards.append(Card("artifact", "space junk"))
-            self.cards.append(Card("artifact", "victory boon"))
+            # The third argument (True) indicates the card is from the rewards deck
+            self.cards += [Card("attack", i, True) for i in range(20, 30)]
+            self.cards += [Card("attack", i, True) for i in range(20, 30)]
+            self.cards += [Card("negotiate", 0, True) for i in range(0, 4)] # Change to special negotiates later
+            self.cards += [Card("reinforcement", i, True) for i in range(5, 8)]
+            self.cards += [Card("reinforcement", i, True) for i in range(5, 8)]
+            self.cards += [Card("kicker", i, True) for i in range(-1, 5)]
+            self.cards.append(Card("artifact", "cosmic zap", True))
+            self.cards.append(Card("artifact", "card zap", True))
+            self.cards.append(Card("artifact", "omni-zap", True))
+            self.cards.append(Card("artifact", "solar wind", True))
+            self.cards.append(Card("artifact", "rebirth", True))
+            self.cards.append(Card("artifact", "ship zap", True))
+            self.cards.append(Card("artifact", "hand zap", True))
+            #self.cards.append(Card("artifact", "finder", True))
+            self.cards.append(Card("artifact", "space junk", True))
+            self.cards.append(Card("artifact", "victory boon", True))
 
         # Destiny decks will have five cards of each player, should be initialized with other = list of players in game
         if type == "destiny":
@@ -737,7 +743,7 @@ class Deck:
 
             players = other
             for player in players:
-                self.cards += [Card("destiny", player.name, player) for i in range(3)]
+                self.cards += [Card("destiny", player.name, False, player) for i in range(3)]
 
         self.shuffle()
 
@@ -766,15 +772,8 @@ class Deck:
     # Discarded cards are added back in and shuffled
     def reshuffle(self):
         empty = False
-
-        if self.type == "draw":
-            self.cards = self.discard_deck.cards
-            self.discard_deck.cards = []
-
-        elif self.type == "destiny":
-            self.cards = self.discard_deck.cards
-            self.discard_deck.cards = []
-
+        self.cards = self.discard_deck.cards
+        self.discard_deck.cards = []
         self.shuffle()
 
     # Used for printing out the cards in the deck
@@ -807,10 +806,11 @@ class Deck:
 
 
 class Card:
-    def __init__(self, type, value, other = "None"):
+    def __init__(self, type, value, reward = False, other = "None"):
         self.type = type
         self.value = value
         self.other = other
+        self.reward = reward
 
     def is_encounter_card(self):
         return self.type == "negotiate" or self.type == "attack"

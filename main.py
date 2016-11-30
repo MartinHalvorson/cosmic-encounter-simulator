@@ -2,22 +2,29 @@ import Simulator
 
 
 winner_count = {}
+num_games_simulated = 10000
 
-for i in range(1):
+for i in range(num_games_simulated):
     sim = Simulator.Simulator([
-        {"name": "Alvin", "power": "None"},
-        {"name": "Brady", "power": "None"},
-        {"name": "Charlie", "power": "None"},
-        {"name": "Donnie", "power": "None"},
-        {"name": "Martin", "power": "None"}
-        ], True)
+        {"name": "Alvin", "power": "Machine"},
+        {"name": "Brady", "power": "Machine"},
+        {"name": "Charlie", "power": "Machine"},
+        {"name": "Donnie", "power": "Machine"},
+        {"name": "Martin", "power": "Warpish"}
+        ], False)
     for player in sim.game.game_winners:
         winner_count[player.name] = winner_count.get(player.name, 0) + 1
 
-print(winner_count)
+# Print number of wins
+# print(winner_count)
+
+# Display winning percentages
+for name in winner_count.keys():
+    print(name + ": " + str(winner_count[name] * 100 / num_games_simulated))
+
 
 '''
-Strategies:
+Explanation of Strategies:
 default - play max card on offense, random card on defense
 "def-neg" - play max card on offense, negotiate (if he/she has one) on defense
 
