@@ -18,8 +18,13 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Zombie", "Cudgel", "Machine", "Loser", "Filch", "Reserve", "Vulch", "Macron", "Virus", "Tripler", "Masochist", "Warpish", "Symbiote", "None"]
-        # Add descriptions of alien powers later
+        self.powers = ["Machine", "Virus", "Warpish", "Zombie", "None"]
+        # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
+        # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
+        # Zombie - cannot lose ships to the warp
+        # None - no alien power
+
+        # Loser, Filch, Reserve, Vulch, Macron, Virus, Tripler, Masochist, Warpish, Symbiote
 
         # Initializing players
         self.players = []
@@ -57,7 +62,7 @@ class Game:
 
         # Determines which player is "destined" to be attacked during the encounter
         self.rewards_discard_deck = Deck()
-        self.rewards_draw_deck = Deck("rewards", True, self.rewards_discard_deck, self.players)
+        self.rewards_draw_deck = Deck("rewards", True, self.rewards_discard_deck)
 
         # Decks are automatically shuffled on creation
 
@@ -271,14 +276,19 @@ class Game:
                         else:
                             self.output += player.name + " doesn't join either side.\n"
 
+            self.default_ally_ships_sent = 2
+
+            if player.power == "Zombie":
+                self.default_ally_ships_sent = 4
+
             # Add in ships for allies
             for player in self.players:
                 if player in self.offense_allies:
-                    self.take_ships(player, 2)
-                    self.offense_ships[player.name] = 2
+                    self.take_ships(player, self.default_ally_ships_sent)
+                    self.offense_ships[player.name] = self.default_ally_ships_sent
                 if player in self.defense_allies:
-                    self.take_ships(player, 2)
-                    self.defense_ships[player.name] = 2
+                    self.take_ships(player, self.default_ally_ships_sent)
+                    self.defense_ships[player.name] = self.default_ally_ships_sent
 
             if step_through:
                 print(self)
@@ -342,6 +352,7 @@ class Game:
 
             offense_value = self.offense_card.value
             defense_value = self.defense_card.value
+
 
             # Both drop negotiates
             if offense_value == 0 and defense_value == 0:
@@ -409,6 +420,12 @@ class Game:
 
             # Both drop attack cards
             else:
+                # Virus Alien Power (multiplies card value by number of ships)
+                if self.offense.power == "Virus":
+                    offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
+                if self.defense.power == "Virus":
+                    defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
+
                 # Add in value of ships
                 offense_value += sum(self.offense_ships.values())
                 defense_value += sum(self.defense_ships.values())
@@ -487,6 +504,7 @@ class Game:
                 self.rewards_discard_deck.cards.append(self.offense_card)
             else:
                 self.discard_deck.cards.append(self.offense_card)
+
             if self.defense_card.reward:
                 self.rewards_discard_deck.cards.append(self.defense_card)
             else:
@@ -720,7 +738,7 @@ class Deck:
         if type == "rewards":
             self.empty = False
             # The third argument (True) indicates the card is from the rewards deck
-            self.cards += [Card("attack", i, True) for i in range(20, 30)]
+            self.cards += [Card("attack", i, True) for i in range(20, 40)]
             self.cards += [Card("attack", i, True) for i in range(20, 30)]
             self.cards += [Card("negotiate", 0, True) for i in range(0, 4)] # Change to special negotiates later
             self.cards += [Card("reinforcement", i, True) for i in range(5, 8)]
@@ -771,10 +789,12 @@ class Deck:
 
     # Discarded cards are added back in and shuffled
     def reshuffle(self):
-        empty = False
         self.cards = self.discard_deck.cards
         self.discard_deck.cards = []
-        self.shuffle()
+        if self.cards == []:
+            raise Exception("Discard deck was empty on reshuffle.")
+        else:
+            self.shuffle()
 
     # Used for printing out the cards in the deck
     def __str__(self):

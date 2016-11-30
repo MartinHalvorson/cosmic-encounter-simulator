@@ -2,15 +2,15 @@ import Simulator
 
 
 winner_count = {}
-num_games_simulated = 10000
+num_games_simulated = 2000
 
 for i in range(num_games_simulated):
     sim = Simulator.Simulator([
         {"name": "Alvin", "power": "Machine"},
-        {"name": "Brady", "power": "Machine"},
-        {"name": "Charlie", "power": "Machine"},
-        {"name": "Donnie", "power": "Machine"},
-        {"name": "Martin", "power": "Warpish"}
+        {"name": "Brady", "power": "Virus"},
+        {"name": "Charlie", "power": "Zombie"},
+        {"name": "Donnie", "power": "Warpish"},
+        {"name": "Martin", "power": "Machine"}
         ], False)
     for player in sim.game.game_winners:
         winner_count[player.name] = winner_count.get(player.name, 0) + 1
