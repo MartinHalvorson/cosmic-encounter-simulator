@@ -284,16 +284,6 @@ class Game:
                             # Sides with offense
                             self.defense_allies.remove(player)
 
-            # Determines which players join which side, adds to output
-            for player in self.players:
-                if player != self.offense and player != self.defense:
-                    if player in self.offense_allies:
-                        self.output += player.name + " joins the offense!\n"
-                    elif player in self.defense_allies:
-                        self.output += player.name + " joins the defense!\n"
-                    else:
-                        self.output += player.name + " doesn't join either side.\n"
-
             self.default_ally_ships_sent = 2
 
             if player.power in ["Masochist", "Zombie"]:
@@ -308,6 +298,19 @@ class Game:
                     self.take_ships(player, self.default_ally_ships_sent)
                     self.defense_ships[player.name] = self.default_ally_ships_sent
 
+            self.output += "\nOffense ships: " + str(sum(self.offense_ships.values())) + "\n"
+            self.output += "Defense ships: " + str(sum(self.defense_ships.values())) + "\n\n"
+
+            # Determines which players join which side, adds to output
+            for player in self.players:
+                if player != self.offense and player != self.defense:
+                    if player in self.offense_allies:
+                        self.output += player.name + " joins the offense with " + str(self.offense_ships.get(player.name, 0)) + " ships!\n"
+                    elif player in self.defense_allies:
+                        self.output += player.name + " joins the defense with " + str(self.defense_ships.get(player.name, 0)) + " ships!\n"
+                    else:
+                        self.output += player.name + " doesn't join either side.\n"
+
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
@@ -320,27 +323,32 @@ class Game:
             # Provides new hand for offense if he/she needs one
             if len(self.offense.hand) == 0 or not self.offense.has_encounter_card():
                 self.deal_hand(self.offense)
-                self.output += "\n" + self.offense.name + " draws a new hand.\n"
+                self.output += self.offense.name + " draws a new hand.\n\n"
 
 
 
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0 or not self.defense.has_encounter_card():
                 self.deal_hand(self.defense)
-                self.output += "\n" + self.defense.name + " draws a new hand.\n"
+                self.output += self.defense.name + " draws a new hand.\n"
 
             for player in [self.offense, self.defense]:
                 if player.power == "Kamikazee":
                     amount_chosen = 3
+                    self.output += "Kamikazee power activated for " + player.name + "!\n\n"
                     self.take_ships(player, amount_chosen)
                     self.add_ships_to_warp(player, amount_chosen)
                     self.draw_cards(player, amount_chosen * 2)
 
-
+            # Each main player selects his/her encounter card
             self.offense_card = self.select_offense_encounter_card()
             self.defense_card = self.select_defense_encounter_card()
 
-            self.output += "\nOffense card selected.\n"
+            # Remove selected encounter card from the hand (in game this card gets placed on the table)
+            self.offense.hand.remove(self.offense_card)
+            self.defense.hand.remove(self.defense_card)
+
+            self.output += "Offense card selected.\n"
             self.output += "Defense card selected.\n"
 
             if step_through:
@@ -439,14 +447,14 @@ class Game:
                 if self.offense.power == "Tripler":
                     self.output += "Tripler power activated for offense!\n\n"
 
-                    if offense_value >= 10:
+                    if offense_value > 10:
                         offense_value = int((offense_value + 2) / 3) # Rounds up
                     else:
                         offense_value = int(offense_value * 3)
                 if self.defense.power == "Tripler":
                     self.output += "Tripler power activated for defense!\n\n"
 
-                    if defense_value >= 10:
+                    if defense_value > 10:
                         defense_value = int((defense_value + 2) / 3) # Rounds up
                     else:
                         defense_value = int(defense_value * 3)
@@ -510,11 +518,14 @@ class Game:
 
                     self.output += "Defense wins.\n"
 
+            # Cudgel Alien Power
             if self.encounter_winner.power == "Cudgel":
                 if self.offense == self.encounter_winner:
                     self.take_ships(self.defense, self.offense_ships.get(self.offense.name, 0))
+                    self.output += "Cudgel power activated for offense!\n\n"
                 if self.defense == self.encounter_winner:
                     self.take_ships(self.offense, self.defense_ships.get(self.defense.name, 0))
+                    self.output += "Cudgel power activated for defense!\n\n"
 
             for player in self.players:
                 if player.power == "Zombie":
