@@ -18,12 +18,13 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Kamikazee", "Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Kamikazee", "Machine", "Masochist", "Parasite", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
+        # Parasite - Can join an encounter whether invited or not
         # Symbiote - starts with double (40) the number of ships
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
@@ -31,7 +32,7 @@ class Game:
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Tier 1: Cudgel, Ghoul, Parasite, Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Trader, Antimatter, Mite, Pacifist
+        # Tier 1: Ghoul, Parasite, Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Trader, Antimatter, Mite, Pacifist
         # Tier 1.5: Tick-Tock, Pickpocket, Shadow, Genius
         # Tier 2: Philanthropist, Filch, Reserve,
         # Tier 3: Disease, Void, Vacuum
@@ -242,7 +243,7 @@ class Game:
                     if random.randint(0, 1) == 1:
                         self.defense_allies.append(player)
 
-            # Determines and prints offensive invitees
+            # Prints offensive invitees
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
@@ -254,7 +255,7 @@ class Game:
                     for invitee in self.offense_allies:
                         self.output += invitee.name + "\n"
 
-            # Determines and prints defensive invitees
+            # Prints defensive invitees
             if step_through:
                 self.output += "\nDefense invites:\n"
                 if self.defense_allies == []:
@@ -268,7 +269,7 @@ class Game:
             # For players invited to both sides, logic to chose to side with offense or defense
             for player in self.players:
                 if not (player is self.offense or player is self.defense):
-                    if player in self.offense_allies and player in self.defense_allies:
+                    if (player in self.offense_allies and player in self.defense_allies) or player.power == "Parasite":
                         if self.offense_num_planets == 4 and not self.num_of_foreign_colonies(player) == 4:
                             # Sides with defense
                             self.offense_allies.remove(player)
