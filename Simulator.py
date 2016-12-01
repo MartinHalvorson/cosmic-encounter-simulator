@@ -18,8 +18,9 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Kamikazee", "Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Kamikazee", "Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
+        # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
@@ -502,6 +503,12 @@ class Game:
 
                     if step_through:
                         self.output += "Defense wins.\n"
+
+            if self.encounter_winner.power == "Cudgel":
+                if self.offense == self.encounter_winner:
+                    self.take_ships(self.defense, self.offense_ships.get(self.offense.name, 0))
+                if self.defense == self.encounter_winner:
+                    self.take_ships(self.offense, self.defense_ships.get(self.defense.name, 0))
 
             for player in self.players:
                 if player.power == "Zombie":
