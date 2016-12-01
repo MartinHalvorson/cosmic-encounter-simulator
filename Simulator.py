@@ -605,7 +605,10 @@ class Game:
         if not self.offense.has_encounter_card:
             raise Exception("Offense doesn't have encounter card.")
 
-        return self.offense.select_max()
+        if self.offense.power == "Tripler":
+            return self.offense.tripler_select()
+        else:
+            return self.offense.select_max()
 
     def select_defense_encounter_card(self):
 
@@ -615,6 +618,9 @@ class Game:
 
         if self.defense.power == "Parasite":
             return self.defense.select_max()
+
+        elif self.defense.power == "Tripler":
+            return self.defense.tripler_select()
 
         # "def-neg" strategy is to play a negotiate as defense to obtain more cards
         elif self.defense.strategy == "def-neg":
@@ -759,6 +765,23 @@ class Player:
                 return_card = card
             if card.value < return_card.value and not card.type == "negotiate":
                 return_card = card
+
+        return return_card
+
+    # Pops attack card (calculated as a Tripler Alien Power) from player's hand and returns it
+    def tripler_select(self):
+
+        return_card = None
+
+        for card in self.hand:
+            if card.is_encounter_card():
+                if return_card is None:
+                    return_card = card
+                if card.value <= 10:
+                    if return_card.value > 10:
+                        return_card = card
+                    if card.value > return_card.value:
+                        return_card = card
 
         return return_card
 

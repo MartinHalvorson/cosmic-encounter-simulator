@@ -9,7 +9,7 @@ power_wins = {}
 # Keeps track of total games played by each power
 power_count = {}
 
-num_games_simulated = 5000
+num_games_simulated = 20000
 
 for i in range(num_games_simulated):
 
