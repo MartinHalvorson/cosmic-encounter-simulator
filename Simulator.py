@@ -18,8 +18,9 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Kamikazee", "Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
+        # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Symbiote - starts with double (40) the number of ships
@@ -29,7 +30,11 @@ class Game:
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Loser, Filch, Reserve, Vulch, Macron, Antimatter
+        # Tier 1: Cudgel, Ghoul, Parasite, Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Trader, Antimatter, Mite, Pacifist
+        # Tier 1.5: Tick-Tock, Pickpocket, Shadow, Genius
+        # Tier 2: Philanthropist, Filch, Reserve,
+        # Tier 3: Disease, Void, Vacuum
+        # Tier 4:
 
         # Initializing players
         self.players = []
@@ -312,8 +317,7 @@ class Game:
                 if step_through:
                     self.output += "\n" + self.offense.name + " draws a new hand.\n"
 
-            # Select max value card for offense
-            self.offense_card = self.select_offense_encounter_card()
+
 
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0 or not self.defense.has_encounter_card():
@@ -321,6 +325,15 @@ class Game:
                 if step_through:
                     self.output += "\n" + self.defense.name + " draws a new hand.\n"
 
+            for player in [self.offense, self.defense]:
+                if player.power == "Kamikazee":
+                    amount_chosen = 3
+                    self.take_ships(player, amount_chosen)
+                    self.add_ships_to_warp(player, amount_chosen)
+                    self.draw_cards(player, amount_chosen * 2)
+
+
+            self.offense_card = self.select_offense_encounter_card()
             self.defense_card = self.select_defense_encounter_card()
 
             if step_through:
@@ -403,7 +416,7 @@ class Game:
 
             # Defense dropped negotiate
             elif defense_value == 0:
-                # Send defender's ships to the warp
+                # Clear defender's ships from the defensive planet
                 self.defense_planet.ships[self.defense.name] = 0
 
                 # Move offense's and allies' ships to the planet
@@ -412,8 +425,7 @@ class Game:
 
                 # Move defensive allies' ships to the warp
                 for name in self.defense_ships.keys():
-                    if not name == self.defense.name:
-                        self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
+                    self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
 
                 # Defense gets cards from offense
                 self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
@@ -460,19 +472,16 @@ class Game:
                     # Offense wins encounter
                     self.encounter_winner = self.offense
 
-                    # Remove defender's ships and send to warp
+                    # Clear defender's ships
                     self.defense_planet.ships[self.defense.name] = 0
-                    self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
 
                     # Move offense and allies to planet
                     for name in self.offense_ships.keys():
                         self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
 
                     # Move defensive allies' ships to the warp
-                    # Note: defender's ships have already been moved
                     for name in self.defense_ships.keys():
-                        if not name == self.defense.name:
-                            self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
+                        self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
 
                     if step_through:
                         self.output += "Offense wins and lands on the colony.\n"
@@ -487,14 +496,12 @@ class Game:
 
                     # Offense ships to warp
                     for name in self.offense_ships.keys():
-                        self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+                        self.add_ships_to_warp(name, self.offense_ships.get(name, 0))
 
                     # Defender ships stay on planet
 
                     if step_through:
                         self.output += "Defense wins.\n"
-                    self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
-
 
             for player in self.players:
                 if player.power == "Zombie":
@@ -535,6 +542,11 @@ class Game:
     # Deals out eight cards to a player
     def deal_hand(self, player):
         for i in range(8):
+            player.hand.append(self.draw_deck.draw())
+
+    # Draws num_of_cards from normal deck
+    def draw_cards(self, player, num_of_cards):
+        for i in range(num_of_cards):
             player.hand.append(self.draw_deck.draw())
 
     # Draw rewards from the rewards deck for winning as ally on defense
@@ -620,6 +632,10 @@ class Game:
                         if planet.owner == player:
                             result.append(planet)
                     return result
+
+    # Adds num_of_ships to player's total ships in the warp
+    def add_ships_to_warp(self, name_of_player, num_of_ships):
+        self.warp[name_of_player] = self.warp.get(name_of_player, 0) + num_of_ships
 
     # Returns list of home planets of input player
     def home_planets(self, player):
