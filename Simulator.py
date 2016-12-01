@@ -19,6 +19,7 @@ class Game:
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
         self.powers = ["Machine", "Masochist", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Symbiote - starts with double (40) the number of ships
@@ -28,7 +29,7 @@ class Game:
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Loser, Filch, Reserve, Vulch, Macron, Warpish, Symbiote
+        # Loser, Filch, Reserve, Vulch, Macron, Antimatter
 
         # Initializing players
         self.players = []
@@ -58,15 +59,15 @@ class Game:
 
         # Draw and discard decks for main deck (encounter cards, flares, artifacts, ...)
         self.discard_deck = Deck()
-        self.draw_deck = Deck("draw", True, self.discard_deck)  # Final product will have this as True (draw_deck should be hidden)
+        self.draw_deck = Deck("draw", False, self.discard_deck)  # Final product will have this as True (draw_deck should be hidden)
 
         # Determines which player is "destined" to be attacked during the encounter
         self.destiny_discard_deck = Deck()
-        self.destiny_draw_deck = Deck("destiny", True, self.destiny_discard_deck, self.players)
+        self.destiny_draw_deck = Deck("destiny", False, self.destiny_discard_deck, self.players)
 
         # Determines which player is "destined" to be attacked during the encounter
         self.rewards_discard_deck = Deck()
-        self.rewards_draw_deck = Deck("rewards", True, self.rewards_discard_deck)
+        self.rewards_draw_deck = Deck("rewards", False, self.rewards_discard_deck)
 
         # Decks are automatically shuffled on creation
 
@@ -155,7 +156,7 @@ class Game:
             while self.destiny_card.other == self.offense:
 
                 # Discard card
-                self.destiny_discard_deck.discard(self.destiny_card)
+                self.discard(self.destiny_card)
 
                 # and redraw until they don't draw his/herself
                 self.destiny_card = self.destiny_draw_deck.draw()
@@ -164,7 +165,7 @@ class Game:
             self.defense = self.destiny_card.other
 
             # Put destiny card in destiny discard deck
-            self.destiny_discard_deck.discard(self.destiny_card)
+            self.discard(self.destiny_card)
 
             if step_through:
                 print(self)
@@ -456,6 +457,9 @@ class Game:
 
                 # Determines encounter winner
                 if offense_value > defense_value:
+                    # Offense wins encounter
+                    self.encounter_winner = self.offense
+
                     # Remove defender's ships and send to warp
                     self.defense_planet.ships[self.defense.name] = 0
                     self.warp[self.defense.name] = self.warp.get(self.defense.name, 0) + self.defense_ships.get(self.defense.name, 0)
@@ -470,12 +474,13 @@ class Game:
                         if not name == self.defense.name:
                             self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
 
-                    self.encounter_winner = self.offense
-
                     if step_through:
                         self.output += "Offense wins and lands on the colony.\n"
 
                 else:
+                    # Defense wins encounter
+                    self.encounter_winner = self.defense
+
                     # Defense ships draw rewards
                     for player in self.defense_allies:
                         self.draw_rewards(player, self.defense_ships.get(player.name, 0))
@@ -489,7 +494,7 @@ class Game:
                     if step_through:
                         self.output += "Defense wins.\n"
                     self.warp[self.offense.name] = self.warp.get(self.offense.name, 0) + self.offense_ships.get(self.offense.name, 0)
-                    self.encounter_winner = self.defense
+
 
             for player in self.players:
                 if player.power == "Zombie":
@@ -516,15 +521,8 @@ class Game:
                 print(self.output)
 
             # Adds encounter cards to discard pile
-            if self.offense_card.reward:
-                self.rewards_discard_deck.cards.append(self.offense_card)
-            else:
-                self.discard_deck.cards.append(self.offense_card)
-
-            if self.defense_card.reward:
-                self.rewards_discard_deck.cards.append(self.defense_card)
-            else:
-                self.discard_deck.cards.append(self.defense_card)
+            self.discard(self.offense_card)
+            self.discard(self.defense_card)
 
             self.check_if_over()
 
@@ -552,6 +550,15 @@ class Game:
                 player2.hand.remove(chosen_card)
                 player1.hand.append(chosen_card)
                 self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
+
+    # Discards card in appropriate discard deck, returns nothing
+    def discard(self, card):
+        if card.reward:
+            self.rewards_discard_deck.cards.append(card)
+        elif card.type == "destiny":
+            self.destiny_discard_deck.cards.append(card)
+        else:
+            self.discard_deck.cards.append(card)
 
     def select_offense_encounter_card(self):
 
