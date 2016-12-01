@@ -266,10 +266,19 @@ class Game:
 
                 self.output += "\n"
 
+
             # For players invited to both sides, logic to chose to side with offense or defense
             for player in self.players:
                 if not (player is self.offense or player is self.defense):
-                    if (player in self.offense_allies and player in self.defense_allies) or player.power == "Parasite":
+
+                    # Parasite Alien Power - can join either side whether invited or not
+                    if player.power == "Parasite":
+                        if player not in self.offense_allies:
+                            self.offense_allies.append(player)
+                        if player not in self.defense_allies:
+                            self.defense_allies.append(player)
+
+                    if (player in self.offense_allies and player in self.defense_allies):
                         if self.offense_num_planets == 4 and not self.num_of_foreign_colonies(player) == 4:
                             # Sides with defense
                             self.offense_allies.remove(player)
