@@ -594,8 +594,11 @@ class Game:
         if not self.defense.has_encounter_card():
             raise Exception("Defense doesn't have encounter card.")
 
+        if self.defense.power == "Parasite":
+            return self.defense.select_max()
+
         # "def-neg" strategy is to play a negotiate as defense to obtain more cards
-        if self.defense.strategy == "def-neg":
+        elif self.defense.strategy == "def-neg":
             return_card = self.defense.select_negotiate()
             if not (return_card is None):
                 return return_card
