@@ -16,6 +16,9 @@ class Game:
         self.warp = {} # Where "dead" ships are stored
         self.planets = []
 
+        # Game Output used for debugging games that throw errors
+        self.game_output = ""
+
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
         self.powers = ["Cudgel", "Kamikazee", "Machine", "Masochist", "Parasite", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
@@ -123,8 +126,7 @@ class Game:
         # This is the main while loop where an entire encounter is cycled through
         while not self.is_over:
 
-            if step_through:
-                self.output = ""
+            self.output = ""
 
             self.encounter_winner = None
 
@@ -144,13 +146,13 @@ class Game:
 
             self.set_ranking()
 
+            self.output += "Rankings: " + "   ".join(
+                [str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ordered_ranking])
+
+            self.output += "\n\nOffense: " + self.offense.name + "\n"
+
             if step_through:
-                self.output += "Rankings: " + "   ".join([str(rankee[0]) + ": " + str(rankee[1]) for rankee in self.ordered_ranking])
-
-                self.output += "\n\nOffense: " + self.offense.name + "\n"
-
                 print(self.output)
-
                 input()
 
         # Destiny phase
@@ -174,13 +176,12 @@ class Game:
             # Put destiny card in destiny discard deck
             self.discard(self.destiny_card)
 
+            self.output += "Defense: " + self.defense.name + "\n\n"
+
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
-
-                self.output += "Defense: " + self.defense.name + "\n\n"
                 print(self.output)
-
                 input()
 
         # Launch phase
@@ -208,15 +209,14 @@ class Game:
 
             # In the event of the defense losing, defense ships will be removed in the resolution stage
 
+            self.output += "Defense " + str(self.defense_planet) + "\n"
+            self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
+            self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
+
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
-
-                self.output += "Defense " + str(self.defense_planet) + "\n"
-                self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
-                self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
                 print(self.output)
-
                 input()
 
         # Alliance phase
@@ -243,29 +243,27 @@ class Game:
                     if random.randint(0, 1) == 1:
                         self.defense_allies.append(player)
 
-            # Prints offensive invitees
+            # Adds offensive invites to output
+            self.output += "Offense invites:\n"
+            if self.offense_allies == []:
+                self.output += "\t<No one invited>\n"
+            else:
+                for invitee in self.offense_allies:
+                    self.output += invitee.name + "\n"
+
+            # Adds defensive invites to output
+            self.output += "\nDefense invites:\n"
+            if self.defense_allies == []:
+                self.output += "\t<No one invited>\n"
+            else:
+                for invitee in self.defense_allies:
+                    self.output += invitee.name + "\n"
+
+            self.output += "\n"
+
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
-
-                self.output += "Offense invites:\n"
-                if self.offense_allies == []:
-                    self.output += "\t<No one invited>\n"
-                else:
-                    for invitee in self.offense_allies:
-                        self.output += invitee.name + "\n"
-
-            # Prints defensive invitees
-            if step_through:
-                self.output += "\nDefense invites:\n"
-                if self.defense_allies == []:
-                    self.output += "\t<No one invited>\n"
-                else:
-                    for invitee in self.defense_allies:
-                        self.output += invitee.name + "\n"
-
-                self.output += "\n"
-
 
             # For players invited to both sides, logic to chose to side with offense or defense
             for player in self.players:
@@ -286,16 +284,15 @@ class Game:
                             # Sides with offense
                             self.defense_allies.remove(player)
 
-            # Determines and prints which players join which side
-            if step_through:
-                for player in self.players:
-                    if player != self.offense and player != self.defense:
-                        if player in self.offense_allies:
-                            self.output += player.name + " joins the offense!\n"
-                        elif player in self.defense_allies:
-                            self.output += player.name + " joins the defense!\n"
-                        else:
-                            self.output += player.name + " doesn't join either side.\n"
+            # Determines which players join which side, adds to output
+            for player in self.players:
+                if player != self.offense and player != self.defense:
+                    if player in self.offense_allies:
+                        self.output += player.name + " joins the offense!\n"
+                    elif player in self.defense_allies:
+                        self.output += player.name + " joins the defense!\n"
+                    else:
+                        self.output += player.name + " doesn't join either side.\n"
 
             self.default_ally_ships_sent = 2
 
@@ -314,9 +311,7 @@ class Game:
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
-
                 print(self.output)
-
                 input()
 
         # Planning phase
@@ -325,16 +320,14 @@ class Game:
             # Provides new hand for offense if he/she needs one
             if len(self.offense.hand) == 0 or not self.offense.has_encounter_card():
                 self.deal_hand(self.offense)
-                if step_through:
-                    self.output += "\n" + self.offense.name + " draws a new hand.\n"
+                self.output += "\n" + self.offense.name + " draws a new hand.\n"
 
 
 
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0 or not self.defense.has_encounter_card():
                 self.deal_hand(self.defense)
-                if step_through:
-                    self.output += "\n" + self.defense.name + " draws a new hand.\n"
+                self.output += "\n" + self.defense.name + " draws a new hand.\n"
 
             for player in [self.offense, self.defense]:
                 if player.power == "Kamikazee":
@@ -347,29 +340,25 @@ class Game:
             self.offense_card = self.select_offense_encounter_card()
             self.defense_card = self.select_defense_encounter_card()
 
+            self.output += "\nOffense card selected.\n"
+            self.output += "Defense card selected.\n"
+
             if step_through:
                 print(self)
                 print("Phase: " + self.phase + "\n")
-
-                self.output += "\nOffense card selected.\n"
-                self.output += "Defense card selected.\n"
-
                 print(self.output)
-
                 input()
 
         # Reveal phase
             self.phase = "Reveal"
 
+            self.output += "\nOffense card: " + str(self.offense_card)
+            self.output += "Defense card: " + str(self.defense_card) + "\n"
+
             if step_through:
                 print(self)
-
-                self.output += "\nOffense card: " + str(self.offense_card)
-                self.output += "Defense card: " + str(self.defense_card) + "\n"
-
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
-
                 input()
 
         # Resolution phase
@@ -405,8 +394,7 @@ class Game:
 
                 self.encounter_winner = self.offense
 
-                if step_through:
-                    self.output += "Colony swap occurred.\n"
+                self.output += "Colony swap occurred.\n"
 
             # Offense dropped negotiate
             elif offense_value == 0:
@@ -421,8 +409,8 @@ class Game:
                 for player in self.defense_allies:
                     self.draw_rewards(player, self.defense_ships.get(player.name, 0))
 
-                if step_through:
-                    self.output += "\nDefense wins, offense draws cards.\n"
+                self.output += "\nDefense wins, offense draws cards.\n"
+
                 self.encounter_winner = self.defense
 
             # Defense dropped negotiate
@@ -443,22 +431,21 @@ class Game:
 
                 self.encounter_winner = self.offense
 
-                if step_through:
-                    self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
+                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
 
             # Both drop attack cards
             else:
                 # Tripler Alien Power
                 if self.offense.power == "Tripler":
-                    if step_through:
-                        self.output += "Tripler power activated for offense!\n\n"
+                    self.output += "Tripler power activated for offense!\n\n"
+
                     if offense_value >= 10:
                         offense_value = int((offense_value + 2) / 3) # Rounds up
                     else:
                         offense_value = int(offense_value * 3)
                 if self.defense.power == "Tripler":
-                    if step_through:
-                        self.output += "Tripler power activated for defense!\n\n"
+                    self.output += "Tripler power activated for defense!\n\n"
+
                     if defense_value >= 10:
                         defense_value = int((defense_value + 2) / 3) # Rounds up
                     else:
@@ -467,12 +454,10 @@ class Game:
                 # Virus Alien Power (multiplies card value by number of ships)
                 if self.offense.power == "Virus":
                     offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
-                    if step_through:
-                        self.output += "Virus power activated for offense!\n\n"
+                    self.output += "Virus power activated for offense!\n\n"
                 if self.defense.power == "Virus":
                     defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
-                    if step_through:
-                        self.output += "Virus power activated for defense!\n\n"
+                    self.output += "Virus power activated for defense!\n\n"
 
                 # Add in value of ships
                 offense_value += sum(self.offense_ships.values())
@@ -481,18 +466,15 @@ class Game:
                 # Warpish Alien Power (adds ships in warp to total)
                 if self.offense.power == "Warpish":
                     offense_value += sum(self.warp.values())
-                    if step_through:
-                        self.output += "Warpish power activated for offense!\n\n"
+                    self.output += "Warpish power activated for offense!\n\n"
                 if self.defense.power == "Warpish":
                     defense_value += sum(self.warp.values())
-                    if step_through:
-                        self.output += "Warpish power activated for defense!\n\n"
+                    self.output += "Warpish power activated for defense!\n\n"
 
                 # Add some option for reinforcements later
 
-                if step_through:
-                    self.output += "Offense value: " + str(offense_value) + "\n"
-                    self.output += "Defense value: " + str(defense_value) + "\n\n"
+                self.output += "Offense value: " + str(offense_value) + "\n"
+                self.output += "Defense value: " + str(defense_value) + "\n\n"
 
                 # Determines encounter winner
                 if offense_value > defense_value:
@@ -510,8 +492,7 @@ class Game:
                     for name in self.defense_ships.keys():
                         self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
 
-                    if step_through:
-                        self.output += "Offense wins and lands on the colony.\n"
+                    self.output += "Offense wins and lands on the colony.\n"
 
                 else:
                     # Defense wins encounter
@@ -527,8 +508,7 @@ class Game:
 
                     # Defender ships stay on planet
 
-                    if step_through:
-                        self.output += "Defense wins.\n"
+                    self.output += "Defense wins.\n"
 
             if self.encounter_winner.power == "Cudgel":
                 if self.offense == self.encounter_winner:
@@ -550,8 +530,7 @@ class Game:
 
             # Offense may elect for second encounter if both victorious on first and he/she has another encounter card
             if self.encounter == 2:
-                if step_through:
-                    self.output += "Offense elects for another encounter."
+                self.output += "Offense elects for another encounter."
 
             # Updates planet list for each player if any were changed
             for player in self.players:
@@ -565,6 +544,8 @@ class Game:
             self.discard(self.defense_card)
 
             self.check_if_over()
+
+            self.game_output += self.output
 
             if step_through:
                 input()
