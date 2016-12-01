@@ -9,19 +9,19 @@ power_wins = {}
 # Keeps track of total games played by each power
 power_count = {}
 
-num_games_simulated = 20000
+num_games_simulated = 1000
 
 for i in range(num_games_simulated):
 
-    if False:  # Random powers
+    if False:  # Playing actual game mode
         sim = Simulator.Simulator([
-            {"name": "Alvin"},
+            {"name": "Martin"},
             {"name": "Brady"},
             {"name": "Charlie"},
             {"name": "Donnie"},
             {"name": "Ernie"}
-        ], False)
-    if False:  # Assigned powers
+        ], True)
+    if True:  # Debugging game mode
         sim = Simulator.Simulator([
             {"name": "Alvin", "power": "Parasite"},
             {"name": "Brady", "power": "Cudgel"},
@@ -29,7 +29,7 @@ for i in range(num_games_simulated):
             {"name": "Donnie", "power": "Tripler"},
             {"name": "Ernie", "power": "Symbiote"}
             ], True)
-    if True:  # Random powers, large simulation
+    if False:  # Simulation mode
         try:
             sim = Simulator.Simulator([
                 {"name": "Alvin"},
@@ -67,11 +67,3 @@ for tuple in power_count.items():
 power_win_list.sort(key=lambda x: x[1], reverse=True)
 for power_tuple in power_win_list:
     print(power_tuple[0] + ": " + str(round(100 * power_tuple[1], 1)))
-
-
-'''
-Explanation of Strategies:
-default - play max card on offense, random card on defense
-"def-neg" - play max card on offense, negotiate (if he/she has one) on defense
-
-'''
