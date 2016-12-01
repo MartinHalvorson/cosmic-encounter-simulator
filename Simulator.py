@@ -298,9 +298,6 @@ class Game:
                     self.take_ships(player, self.default_ally_ships_sent)
                     self.defense_ships[player.name] = self.default_ally_ships_sent
 
-            self.output += "\nOffense ships: " + str(sum(self.offense_ships.values())) + "\n"
-            self.output += "Defense ships: " + str(sum(self.defense_ships.values())) + "\n\n"
-
             # Determines which players join which side, adds to output
             for player in self.players:
                 if player != self.offense and player != self.defense:
@@ -310,6 +307,11 @@ class Game:
                         self.output += player.name + " joins the defense with " + str(self.defense_ships.get(player.name, 0)) + " ships!\n"
                     else:
                         self.output += player.name + " doesn't join either side.\n"
+            self.output += "\n"
+
+            # Output updated ship totals
+            self.output += "Offense ships: " + str(sum(self.offense_ships.values())) + "\n"
+            self.output += "Defense ships: " + str(sum(self.defense_ships.values())) + "\n\n"
 
             if step_through:
                 print(self)
