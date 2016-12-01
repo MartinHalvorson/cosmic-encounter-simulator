@@ -441,11 +441,15 @@ class Game:
             else:
                 # Tripler Alien Power
                 if self.offense.power == "Tripler":
+                    if step_through:
+                        self.output += "Tripler power activated for offense!\n\n"
                     if offense_value >= 10:
                         offense_value = int((offense_value + 2) / 3) # Rounds up
                     else:
                         offense_value = int(offense_value * 3)
                 if self.defense.power == "Tripler":
+                    if step_through:
+                        self.output += "Tripler power activated for defense!\n\n"
                     if defense_value >= 10:
                         defense_value = int((defense_value + 2) / 3) # Rounds up
                     else:
@@ -454,20 +458,32 @@ class Game:
                 # Virus Alien Power (multiplies card value by number of ships)
                 if self.offense.power == "Virus":
                     offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
+                    if step_through:
+                        self.output += "Virus power activated for offense!\n\n"
                 if self.defense.power == "Virus":
                     defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
+                    if step_through:
+                        self.output += "Virus power activated for defense!\n\n"
 
                 # Add in value of ships
                 offense_value += sum(self.offense_ships.values())
                 defense_value += sum(self.defense_ships.values())
 
+                # Warpish Alien Power (adds ships in warp to total)
                 if self.offense.power == "Warpish":
                     offense_value += sum(self.warp.values())
-
+                    if step_through:
+                        self.output += "Warpish power activated for offense!\n\n"
                 if self.defense.power == "Warpish":
                     defense_value += sum(self.warp.values())
+                    if step_through:
+                        self.output += "Warpish power activated for defense!\n\n"
 
                 # Add some option for reinforcements later
+
+                if step_through:
+                    self.output += "Offense value: " + str(offense_value) + "\n"
+                    self.output += "Defense value: " + str(defense_value) + "\n\n"
 
                 # Determines encounter winner
                 if offense_value > defense_value:
@@ -769,7 +785,7 @@ class Player:
 
     # Used for printing out a player
     def __str__(self):
-        result = "Player: " + self.name + " \t" + self.power + " \t" + self.color + "\n"
+        result = "Player: " + self.name + "    " + self.power + "    " + self.color + "\n"
 
         # Adds Player's planets to result
         for planet in self.home_planets:
@@ -801,28 +817,26 @@ class Deck:
         # Draw deck will be initialized with attack, negotiate, and reinforcement cards
         if type == "draw":
             self.empty = False
-            self.cards += [Card("attack", i) for i in range(0, 30)]
-            self.cards += [Card("attack", i) for i in range(0, 15)]
-            self.cards += [Card("negotiate", 0) for i in range(0, 10)]
-            self.cards += [Card("reinforcement", i) for i in range(2, 5)]
-            self.cards += [Card("reinforcement", i) for i in range(2, 5)]
+            self.cards += [Card("attack", value) for value in [0, 1, 4, 4, 4, 4, 5, 6, 6, 6, 6, 6, 6, 6, 7, 8, 8, 8, 8, 8, 8, 8, 9, 10, 10, 10, 10, 11, 12, 12, 13, 14, 14, 15,  20, 20, 23, 30, 40]]
+            self.cards += [Card("negotiate", 0) for i in range(0, 15)]
+            self.cards += [Card("reinforcement", value) for value in [2, 2, 3, 3, 3, 5]]
             self.cards += [Card("artifact", "cosmic zap") for i in range(2)]
             self.cards += [Card("artifact", "card zap") for i in range(2)]
             self.cards += [Card("artifact", "mobius tubes") for i in range(2)]
-            self.cards += [Card("artifact", "emotion control") for i in range(2)]
+            self.cards.append(Card("artifact", "emotion control"))
             self.cards.append(Card("artifact", "force field"))
             self.cards.append(Card("artifact", "quash"))
+            self.cards.append(Card("artifact", "ionic gas"))
+            self.cards.append(Card("artifact", "plague"))
 
         # Defender rewards deck
         if type == "rewards":
             self.empty = False
             # The third argument (True) indicates the card is from the rewards deck
-            self.cards += [Card("attack", i, True) for i in range(20, 40)]
-            self.cards += [Card("attack", i, True) for i in range(20, 30)]
+            self.cards += [Card("attack", value, True) for value in [-7, -1, 10, 12, 14, 16, 18, 20, 23]]
             self.cards += [Card("negotiate", 0, True) for i in range(0, 4)] # Change to special negotiates later
-            self.cards += [Card("reinforcement", i, True) for i in range(5, 8)]
-            self.cards += [Card("reinforcement", i, True) for i in range(5, 8)]
-            self.cards += [Card("kicker", i, True) for i in range(-1, 5)]
+            self.cards += [Card("reinforcement", value, True) for value in [4, 4, 6, 6]]
+            self.cards += [Card("kicker", value, True) for value in [-1, 0, 1, 2, 2, 3, 4]]
             self.cards.append(Card("artifact", "cosmic zap", True))
             self.cards.append(Card("artifact", "card zap", True))
             self.cards.append(Card("artifact", "omni-zap", True))

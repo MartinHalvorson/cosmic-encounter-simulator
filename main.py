@@ -9,26 +9,21 @@ power_wins = {}
 # Keeps track of total games played by each power
 power_count = {}
 
-num_games_simulated = 1000
+num_games_simulated = 1
 
 for i in range(num_games_simulated):
-    try:
-        sim = Simulator.Simulator([
-            {"name": "Alvin"},
-            {"name": "Brady"},
-            {"name": "Charlie"},
-            {"name": "Donnie"},
-            {"name": "Ernie"}
-            ], False)
-        for player in sim.game.players:
-            if player in sim.game.game_winners:
-                player_wins[player.name] = player_wins.get(player.name, 0) + 1
-                power_wins[player.power] = power_wins.get(player.power, 0) + 1
-            power_count[player.power] = power_count.get(player.power, 0) + 1
-    except:
-        i -= 1
-    if i % 200 == 0:
-        print(i)
+    sim = Simulator.Simulator([
+        {"name": "Alvin", "power": "Parasite"},
+        {"name": "Brady", "power": "Cudgel"},
+        {"name": "Charlie", "power": "Kamikazee"},
+        {"name": "Donnie", "power": "Tripler"},
+        {"name": "Ernie", "power": "Symbiote"}
+        ], True)
+    for player in sim.game.players:
+        if player in sim.game.game_winners:
+            player_wins[player.name] = player_wins.get(player.name, 0) + 1
+            power_wins[player.power] = power_wins.get(player.power, 0) + 1
+        power_count[player.power] = power_count.get(player.power, 0) + 1
 
 # Display winning percentages for each player
 print("Player Win Percentages:")
