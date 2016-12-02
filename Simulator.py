@@ -21,13 +21,15 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Ghoul", "Kamikazee", "Machine", "Masochist", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
+        # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
+        # Pacifist - Wins if he/she plays a negotiate and opponent plays an attack card
         # Parasite - Can join an encounter whether invited or not
         # Symbiote - starts with double (40) the number of ships
         # Trader - may swap hands with opponent prior to encounter
@@ -38,8 +40,8 @@ class Game:
         # None - no alien power
 
         # Tier 1: Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Antimatter, Mite
-        # Tier 1.5: Tick-Tock, Pickpocket, Shadow, Genius
-        # Tier 2: Philanthropist, Filch, Reserve,
+        # Tier 1.5: Tick-Tock, Pickpocket, Shadow
+        # Tier 2: Philanthropist, Filch, Reserve
         # Tier 3: Disease, Void, Vacuum
         # Tier 4:
 
@@ -648,6 +650,9 @@ class Game:
                 self.is_over = True
                 self.game_winners.append(player)
             if player.power == "Masochist" and self.warp.get(player.name, 0) == 20:
+                self.is_over = True
+                self.game_winners.append(player)
+            if player.power == "Genius" and len(player.hand) >= 20:
                 self.is_over = True
                 self.game_winners.append(player)
 
