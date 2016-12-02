@@ -367,10 +367,10 @@ class Game:
 
             # Choosing to activate Mirror (if one of main players)
             if self.offense.power == "Mirror":
-                if self.offense_card < self.offense_card.mirrored():
+                if self.offense_card.value < self.offense_card.mirrored():
                     self.is_Mirror_active = True
             if self.defense.power == "Mirror":
-                if self.defense_card < self.defense_card.mirrored():
+                if self.defense_card.value < self.defense_card.mirrored():
                     self.is_Mirror_active = True
 
             self.output += "Offense card selected.\n"
