@@ -21,7 +21,7 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
@@ -29,6 +29,7 @@ class Game:
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
+        # Mirror - Can reverse the digits on an attack card after cards are selected
         # Pacifist - Wins if he/she plays a negotiate and opponent plays an attack card
         # Parasite - Can join an encounter whether invited or not
         # Symbiote - starts with double (40) the number of ships
@@ -39,8 +40,9 @@ class Game:
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Tier 1: Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Antimatter, Mite
-        # Tier 1.5: Tick-Tock, Pickpocket, Shadow
+        # Next: Loser, Antimatter, then Tick-Tock, Warrior
+        # Tier 1: Leviathan, Loser, Vulch, Macron, Antimatter, Mite
+        # Tier 1.5: Pickpocket, Shadow
         # Tier 2: Philanthropist, Filch, Reserve
         # Tier 3: Disease, Void, Vacuum
         # Tier 4:
@@ -131,6 +133,10 @@ class Game:
         while not self.is_over:
 
             self.output = ""
+
+            # Power specific variables
+            self.is_Mirror_active = False
+            self.is_Loser_active = False
 
             self.encounter_winner = None
 
@@ -359,6 +365,14 @@ class Game:
             self.offense.hand.remove(self.offense_card)
             self.defense.hand.remove(self.defense_card)
 
+            # Choosing to activate Mirror (if one of main players)
+            if self.offense.power == "Mirror":
+                if self.offense_card < self.offense_card.mirrored():
+                    self.is_Mirror_active = True
+            if self.defense.power == "Mirror":
+                if self.defense_card < self.defense_card.mirrored():
+                    self.is_Mirror_active = True
+
             self.output += "Offense card selected.\n"
             self.output += "Defense card selected.\n"
 
@@ -387,9 +401,13 @@ class Game:
                 print(self)
                 print("Phase: " + self.phase + "\n")
 
-            offense_value = self.offense_card.value
-            defense_value = self.defense_card.value
-
+            # Mirror Alien Power
+            if self.is_Mirror_active:
+                self.offense_value = self.offense_card.mirrored()
+                self.defense_value = self.defense_card.mirrored()
+            else:
+                offense_value = self.offense_card.value
+                defense_value = self.defense_card.value
 
             # Both drop negotiates
             if offense_value == 0 and defense_value == 0:
@@ -965,6 +983,9 @@ class Card:
 
     def is_encounter_card(self):
         return self.type == "negotiate" or self.type == "attack"
+
+    def mirrored(self):
+        return self.value / 10 + (self.value % 10 * 10)
 
     # Used for printing out the type of card
     def __str__(self):
