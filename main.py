@@ -14,6 +14,7 @@ num_games_simulated = 1000
 for i in range(num_games_simulated):
 
     if False:  # Playing actual game mode
+        i = num_games_simulated
         sim = Simulator.Simulator([
             {"name": "Martin"},
             {"name": "Brady"},
@@ -21,7 +22,7 @@ for i in range(num_games_simulated):
             {"name": "Donnie"},
             {"name": "Ernie"}
         ], True)
-    if True:  # Debugging game mode
+    if False:  # Debugging game mode
         sim = Simulator.Simulator([
             {"name": "Alvin", "power": "Parasite"},
             {"name": "Brady", "power": "Cudgel"},
@@ -29,7 +30,7 @@ for i in range(num_games_simulated):
             {"name": "Donnie", "power": "Tripler"},
             {"name": "Ernie", "power": "Symbiote"}
             ], True)
-    if False:  # Simulation mode
+    if True:  # Simulation mode
         try:
             sim = Simulator.Simulator([
                 {"name": "Alvin"},

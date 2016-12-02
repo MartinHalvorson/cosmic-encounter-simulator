@@ -21,21 +21,23 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Kamikazee", "Machine", "Masochist", "Parasite", "Symbiote", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Ghoul", "Kamikazee", "Machine", "Masochist", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
+        # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Parasite - Can join an encounter whether invited or not
         # Symbiote - starts with double (40) the number of ships
+        # Trader - may swap hands with opponent prior to encounter
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
         # Warpish - adds the total number of ships in the warp to total score (as main player)
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Tier 1: Ghoul, Parasite, Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Trader, Antimatter, Mite, Pacifist
+        # Tier 1: Leviathan, Warrior, Mirror, Loser, Vulch, Macron, Antimatter, Mite
         # Tier 1.5: Tick-Tock, Pickpocket, Shadow, Genius
         # Tier 2: Philanthropist, Filch, Reserve,
         # Tier 3: Disease, Void, Vacuum
@@ -327,13 +329,18 @@ class Game:
                 self.deal_hand(self.offense)
                 self.output += self.offense.name + " draws a new hand.\n\n"
 
-
-
             # Provides new hand for defense if he/she needs one
             if len(self.defense.hand) == 0 or not self.defense.has_encounter_card():
                 self.deal_hand(self.defense)
                 self.output += self.defense.name + " draws a new hand.\n"
 
+            # Trader Alien Power
+            if self.offense.power == "Trader" and len(self.offense.hand) < len(self.defense.hand):
+                self.offense.hand, self.defense.hand = self.defense.hand, self.offense.hand
+            if self.defense.power == "Trader" and len(self.defense.hand) < len(self.offense.hand):
+                self.offense.hand, self.defense.hand = self.defense.hand, self.offense.hand
+
+            # Kamikazee Alien Power
             for player in [self.offense, self.defense]:
                 if player.power == "Kamikazee":
                     amount_chosen = 3
@@ -406,42 +413,29 @@ class Game:
 
                 self.output += "Colony swap occurred.\n"
 
+            # Pacifist Alien Power
+            elif self.offense.power == "Pacifist" and offense_value == 0:
+                self.encounter_winner = self.offense
+                self.output += "Pacifist power activated on offense!\n"
+            elif self.defense.power == "Pacifist" and defense_value == 0:
+                self.encounter_winner = self.defense
+                self.output += "Pacifist power activated on defense!\n"
+
             # Offense dropped negotiate
             elif offense_value == 0:
-                # Offense ships to warp
-                for name in self.offense_ships.keys():
-                    self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+                self.encounter_winner = self.defense
+                self.output += "\nDefense wins, offense draws cards.\n"
 
                 # Offense gets cards from defense
                 self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
 
-                # Defensive allies draw rewards (card per number of ship)
-                for player in self.defense_allies:
-                    self.draw_rewards(player, self.defense_ships.get(player.name, 0))
-
-                self.output += "\nDefense wins, offense draws cards.\n"
-
-                self.encounter_winner = self.defense
-
             # Defense dropped negotiate
             elif defense_value == 0:
-                # Clear defender's ships from the defensive planet
-                self.defense_planet.ships[self.defense.name] = 0
-
-                # Move offense's and allies' ships to the planet
-                for name in self.offense_ships.keys():
-                    self.defense_planet.ships[name] = self.defense_planet.ships.get(name, 0) + self.offense_ships.get(name, 0)
-
-                # Move defensive allies' ships to the warp
-                for name in self.defense_ships.keys():
-                    self.warp[name] = self.warp.get(name, 0) + self.defense_ships.get(name, 0)
+                self.encounter_winner = self.offense
+                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
 
                 # Defense gets cards from offense
                 self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
-
-                self.encounter_winner = self.offense
-
-                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
 
             # Both drop attack cards
             else:
@@ -490,35 +484,39 @@ class Game:
                 if offense_value > defense_value:
                     # Offense wins encounter
                     self.encounter_winner = self.offense
-
-                    # Clear defender's ships
-                    self.defense_planet.ships[self.defense.name] = 0
-
-                    # Move offense and allies to planet
-                    for name in self.offense_ships.keys():
-                        self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
-
-                    # Move defensive allies' ships to the warp
-                    for name in self.defense_ships.keys():
-                        self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
-
                     self.output += "Offense wins and lands on the colony.\n"
 
                 else:
                     # Defense wins encounter
                     self.encounter_winner = self.defense
-
-                    # Defense ships draw rewards
-                    for player in self.defense_allies:
-                        self.draw_rewards(player, self.defense_ships.get(player.name, 0))
-
-                    # Offense ships to warp
-                    for name in self.offense_ships.keys():
-                        self.add_ships_to_warp(name, self.offense_ships.get(name, 0))
-
-                    # Defender ships stay on planet
-
                     self.output += "Defense wins.\n"
+
+            if self.encounter_winner == self.offense:
+                # Clear defender's ships
+                self.defense_planet.ships[self.defense.name] = 0
+
+                # Move offense and allies to planet
+                for name in self.offense_ships.keys():
+                    self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
+
+                # Move defensive allies' ships to the warp
+                for name in self.defense_ships.keys():
+                    self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
+
+            elif self.encounter_winner == self.defense:
+                # Offense ships to warp
+                for name in self.offense_ships.keys():
+                    self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+
+                # Defensive allies draw rewards (card per number of ship)
+                for player in self.defense_allies:
+                    self.draw_rewards(player, self.defense_ships.get(player.name, 0))
+                    self.return_ships(player, self.defense_ships.get(player.name, 0))
+
+                # Clear defender's ships from the defensive planet
+                self.defense_planet.ships[self.defense.name] = 0
+
+                # Defender ships stay on planet
 
             # Cudgel Alien Power
             if self.encounter_winner.power == "Cudgel":
@@ -528,6 +526,15 @@ class Game:
                 if self.defense == self.encounter_winner:
                     self.take_ships(self.offense, self.defense_ships.get(self.defense.name, 0))
                     self.output += "Cudgel power activated for defense!\n\n"
+
+            # Ghoul Alien Power
+            if self.encounter_winner.power == "Ghoul":
+                if self.encounter_winner == self.offense:
+                    self.draw_rewards(self.offense, sum(self.defense_ships.values()))
+                elif self.encounter_winner == self.defense:
+                    self.draw_rewards(self.defense, sum(self.offense_ships.values()))
+                else:
+                    raise Exception("Exception raised in Ghoul Rewards section!")
 
             for player in self.players:
                 if player.power == "Zombie":
