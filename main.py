@@ -1,6 +1,6 @@
 import Simulator
 
-num_games_simulated = 1000
+num_games_simulated = 10000
 num_of_threads = 1
 
 sim = Simulator.Simulator(num_games_simulated, num_of_threads, [

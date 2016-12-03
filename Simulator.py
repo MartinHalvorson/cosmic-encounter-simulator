@@ -22,8 +22,22 @@ class Simulator:
 
         for i in range(num_of_games):
 
-            # Throw out games that throw an exception
-            try:
+            if catch_errors:
+                # Throw out games that throw an exception
+                try:
+                    game = Game(names_dict, show_output)
+
+                    for player in game.players:
+                        if player in game.game_winners:
+                            self.player_wins[player.name] = self.player_wins.get(player.name, 0) + 1
+                            self.power_wins[player.power] = self.power_wins.get(player.power, 0) + 1
+                        self.power_count[player.power] = self.power_count.get(player.power, 0) + 1
+
+                except:
+                    self.exceptions += 1
+                    i -= 1
+
+            else:
                 game = Game(names_dict, show_output)
 
                 for player in game.players:
@@ -31,10 +45,6 @@ class Simulator:
                         self.player_wins[player.name] = self.player_wins.get(player.name, 0) + 1
                         self.power_wins[player.power] = self.power_wins.get(player.power, 0) + 1
                     self.power_count[player.power] = self.power_count.get(player.power, 0) + 1
-
-            except:
-                self.exceptions += 1
-                i -= 1
 
             # Shows progress every 200 games
             if i % 200 == 0:
