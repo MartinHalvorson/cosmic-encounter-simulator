@@ -1,6 +1,5 @@
 import random
 import time
-import threading
 
 
 # Simulator class simulates num_of_games Game(s) and keeps track of results
@@ -43,7 +42,6 @@ class Simulator:
 
         self.total_time = time.clock() - start_time
         self.average_time = self.total_time / num_of_games
-
 
 # Game class represents a single game of Cosmic Encounter
 class Game:
