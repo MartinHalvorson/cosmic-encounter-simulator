@@ -21,12 +21,13 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Loser", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
+        # Loser - Loser declares if both players are trying to lose the encounter prior to the encounter
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Mirror - Can reverse the digits on an attack card after cards are selected
@@ -357,6 +358,14 @@ class Game:
                     self.add_ships_to_warp(player, amount_chosen)
                     self.draw_cards(player, amount_chosen * 2)
 
+            # Loser Alien Power - choose to activate or not
+            for player in [self.offense, self.defense]:
+                if player.power == "Loser":
+                    min_card = player.select_min()
+                    if min_card.value <= 4:
+                        self.is_Loser_active = True
+                    player.hand.append(min_card)
+
             # Each main player selects his/her encounter card
             self.offense_card = self.select_offense_encounter_card()
             self.defense_card = self.select_defense_encounter_card()
@@ -403,8 +412,8 @@ class Game:
 
             # Mirror Alien Power
             if self.is_Mirror_active:
-                self.offense_value = self.offense_card.mirrored()
-                self.defense_value = self.defense_card.mirrored()
+                offense_value = self.offense_card.mirrored()
+                defense_value = self.defense_card.mirrored()
             else:
                 offense_value = self.offense_card.value
                 defense_value = self.defense_card.value
@@ -433,110 +442,132 @@ class Game:
 
                 self.output += "Colony swap occurred.\n"
 
-            # Pacifist Alien Power
-            elif self.offense.power == "Pacifist" and offense_value == 0:
-                self.encounter_winner = self.offense
-                self.output += "Pacifist power activated on offense!\n"
-            elif self.defense.power == "Pacifist" and defense_value == 0:
-                self.encounter_winner = self.defense
-                self.output += "Pacifist power activated on defense!\n"
-
-            # Offense dropped negotiate
-            elif offense_value == 0:
-                self.encounter_winner = self.defense
-                self.output += "\nDefense wins, offense draws cards.\n"
-
-                # Offense gets cards from defense
-                self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
-
-            # Defense dropped negotiate
-            elif defense_value == 0:
-                self.encounter_winner = self.offense
-                self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
-
-                # Defense gets cards from offense
-                self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
-
-            # Both drop attack cards
+            # Only one side drops a negotiate
             else:
-                # Tripler Alien Power
-                if self.offense.power == "Tripler":
-                    self.output += "Tripler power activated for offense!\n\n"
 
-                    if offense_value > 10:
-                        offense_value = int((offense_value + 2) / 3) # Rounds up
-                    else:
-                        offense_value = int(offense_value * 3)
-                if self.defense.power == "Tripler":
-                    self.output += "Tripler power activated for defense!\n\n"
-
-                    if defense_value > 10:
-                        defense_value = int((defense_value + 2) / 3) # Rounds up
-                    else:
-                        defense_value = int(defense_value * 3)
-
-                # Virus Alien Power (multiplies card value by number of ships)
-                if self.offense.power == "Virus":
-                    offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
-                    self.output += "Virus power activated for offense!\n\n"
-                if self.defense.power == "Virus":
-                    defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
-                    self.output += "Virus power activated for defense!\n\n"
-
-                # Add in value of ships
-                offense_value += sum(self.offense_ships.values())
-                defense_value += sum(self.defense_ships.values())
-
-                # Warpish Alien Power (adds ships in warp to total)
-                if self.offense.power == "Warpish":
-                    offense_value += sum(self.warp.values())
-                    self.output += "Warpish power activated for offense!\n\n"
-                if self.defense.power == "Warpish":
-                    defense_value += sum(self.warp.values())
-                    self.output += "Warpish power activated for defense!\n\n"
-
-                # Add some option for reinforcements later
-
-                self.output += "Offense value: " + str(offense_value) + "\n"
-                self.output += "Defense value: " + str(defense_value) + "\n\n"
-
-                # Determines encounter winner
-                if offense_value > defense_value:
-                    # Offense wins encounter
+                # Pacifist Alien Power
+                if self.offense.power == "Pacifist" and offense_value == 0:
                     self.encounter_winner = self.offense
-                    self.output += "Offense wins and lands on the colony.\n"
+                    self.output += "Pacifist power activated on offense!\n"
+                elif self.defense.power == "Pacifist" and defense_value == 0:
+                    self.encounter_winner = self.defense
+                    self.output += "Pacifist power activated on defense!\n"
+
+                # Offense dropped negotiate
+                elif offense_value == 0:
+                    self.encounter_winner = self.defense
+                    self.output += "\nDefense wins, offense draws cards.\n"
+
+                    # Offense gets cards from defense
+                    self.take_cards(self.offense, self.defense, self.offense_ships.get(self.offense.name, 0))
+
+                # Defense dropped negotiate
+                elif defense_value == 0:
+                    self.encounter_winner = self.offense
+                    self.output += "\nOffense wins and lands on the colony. Defense draws cards.\n"
+
+                    # Defense gets cards from offense
+                    self.take_cards(self.defense, self.offense, self.defense_ships.get(self.defense.name, 0))
+
+                # Both drop attack cards
+                else:
+
+                    # Tripler Alien Power
+                    if self.offense.power == "Tripler":
+                        self.output += "Tripler power activated for offense!\n\n"
+
+                        if offense_value > 10:
+                            offense_value = int((offense_value + 2) / 3) # Rounds up
+                        else:
+                            offense_value = int(offense_value * 3)
+                    if self.defense.power == "Tripler":
+                        self.output += "Tripler power activated for defense!\n\n"
+
+                        if defense_value > 10:
+                            defense_value = int((defense_value + 2) / 3) # Rounds up
+                        else:
+                            defense_value = int(defense_value * 3)
+
+                    # Virus Alien Power (multiplies card value by number of ships)
+                    if self.offense.power == "Virus":
+                        offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
+                        self.output += "Virus power activated for offense!\n\n"
+                    if self.defense.power == "Virus":
+                        defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
+                        self.output += "Virus power activated for defense!\n\n"
+
+                    # Add in value of ships
+                    offense_value += sum(self.offense_ships.values())
+                    defense_value += sum(self.defense_ships.values())
+
+                    # Warpish Alien Power (adds ships in warp to total)
+                    if self.offense.power == "Warpish":
+                        offense_value += sum(self.warp.values())
+                        self.output += "Warpish power activated for offense!\n\n"
+                    if self.defense.power == "Warpish":
+                        defense_value += sum(self.warp.values())
+                        self.output += "Warpish power activated for defense!\n\n"
+
+                    # Add some option for reinforcements later
+
+                    self.output += "Offense value: " + str(offense_value) + "\n"
+                    self.output += "Defense value: " + str(defense_value) + "\n\n"
+
+                    # Determines encounter winner
+                    if not self.is_Loser_active:
+
+                        # Normal win condition
+                        if offense_value > defense_value:
+                            # Offense wins encounter
+                            self.encounter_winner = self.offense
+                            self.output += "Offense wins and lands on the colony.\n"
+
+                        else:
+                            # Defense wins encounter
+                            self.encounter_winner = self.defense
+                            self.output += "Defense wins.\n"
+                    else:
+
+                        # Loser win condition
+                        if offense_value < defense_value:
+                            # Offense wins encounter
+                            self.encounter_winner = self.offense
+                            self.output += "Offense wins and lands on the colony.\n"
+
+                        else:
+                            # Defense wins encounter
+                            self.encounter_winner = self.defense
+                            self.output += "Defense wins.\n"
+
+                if self.encounter_winner == self.offense:
+                    # Clear defender's ships
+                    self.defense_planet.ships[self.defense.name] = 0
+
+                    # Move offense and allies to planet
+                    for name in self.offense_ships.keys():
+                        self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
+
+                    # Move defensive allies' ships to the warp
+                    for name in self.defense_ships.keys():
+                        self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
+
+                elif self.encounter_winner == self.defense:
+                    # Offense ships to warp
+                    for name in self.offense_ships.keys():
+                        self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
+
+                    # Defensive allies draw rewards (card per number of ship)
+                    for player in self.defense_allies:
+                        self.draw_rewards(player, self.defense_ships.get(player.name, 0))
+                        self.return_ships(player, self.defense_ships.get(player.name, 0))
+
+                    # Clear defender's ships from the defensive planet
+                    self.defense_planet.ships[self.defense.name] = 0
+
+                    # Defender ships stay on planet
 
                 else:
-                    # Defense wins encounter
-                    self.encounter_winner = self.defense
-                    self.output += "Defense wins.\n"
-
-            if self.encounter_winner == self.offense:
-                # Clear defender's ships
-                self.defense_planet.ships[self.defense.name] = 0
-
-                # Move offense and allies to planet
-                for name in self.offense_ships.keys():
-                    self.defense_planet.ships[name] = self.offense_ships.get(name, 0)
-
-                # Move defensive allies' ships to the warp
-                for name in self.defense_ships.keys():
-                    self.add_ships_to_warp(name, self.defense_ships.get(name, 0))
-
-            elif self.encounter_winner == self.defense:
-                # Offense ships to warp
-                for name in self.offense_ships.keys():
-                    self.warp[name] = self.warp.get(name, 0) + self.offense_ships.get(name, 0)
-
-                # Defensive allies draw rewards (card per number of ship)
-                for player in self.defense_allies:
-                    self.draw_rewards(player, self.defense_ships.get(player.name, 0))
-                    self.return_ships(player, self.defense_ships.get(player.name, 0))
-
-                # Clear defender's ships from the defensive planet
-                self.defense_planet.ships[self.defense.name] = 0
-
-                # Defender ships stay on planet
+                    raise Exception("self.encounter_winner is still None at end of encounter.")
 
             # Cudgel Alien Power
             if self.encounter_winner.power == "Cudgel":
@@ -632,8 +663,12 @@ class Game:
         if not self.offense.has_encounter_card:
             raise Exception("Offense doesn't have encounter card.")
 
-        if self.offense.power == "Tripler":
+        if self.is_Loser_active:
+            return self.offense.select_min()
+
+        elif self.offense.power == "Tripler":
             return self.offense.tripler_select()
+
         else:
             return self.offense.select_max()
 
@@ -643,7 +678,10 @@ class Game:
         if not self.defense.has_encounter_card():
             raise Exception("Defense doesn't have encounter card.")
 
-        if self.defense.power == "Parasite":
+        if self.is_Loser_active:
+            return self.defense.select_min()
+
+        elif self.defense.power == "Parasite":
             return self.defense.select_max()
 
         elif self.defense.power == "Tripler":
@@ -791,10 +829,12 @@ class Player:
         return_card = None
 
         for card in self.hand:
-            if return_card is None and card.is_encounter_card():
-                return_card = card
-            if card.value < return_card.value and not card.type == "negotiate":
-                return_card = card
+
+            if  card.is_encounter_card():
+                if return_card is None:
+                    return_card = card
+                if card.value < return_card.value and not card.type == "negotiate":
+                    return_card = card
 
         return return_card
 

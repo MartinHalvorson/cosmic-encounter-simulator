@@ -1,4 +1,6 @@
 import Simulator
+import time
+from threading import Thread
 
 # Keeps track of total wins by each player
 player_wins = {}
@@ -10,6 +12,8 @@ power_wins = {}
 power_count = {}
 
 num_games_simulated = 1000
+
+num_of_threads = 5
 
 for i in range(num_games_simulated):
 
@@ -31,6 +35,10 @@ for i in range(num_games_simulated):
             {"name": "Ernie", "power": "Symbiote"}
             ], True)
     if True:  # Simulation mode
+
+
+
+
         try:
             sim = Simulator.Simulator([
                 {"name": "Alvin"},
@@ -41,6 +49,17 @@ for i in range(num_games_simulated):
             ], False)
         except:
             i -= 1
+
+        if i % 200 == 0:
+            print(i)
+    if False:  # Debugging Simulation mode
+        sim = Simulator.Simulator([
+                {"name": "Alvin"},
+                {"name": "Brady"},
+                {"name": "Charlie"},
+                {"name": "Donnie"},
+                {"name": "Ernie"}
+            ], False)
 
         if i % 200 == 0:
             print(i)
