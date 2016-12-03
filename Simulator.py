@@ -1,16 +1,56 @@
 import random
+import time
+import threading
 
 
+# Simulator class simulates num_of_games Game(s) and keeps track of results
 class Simulator:
-    def __init__(self, names_dict, step_through = False):
-        self.game = Game(names_dict, step_through)
+    def __init__(self, num_of_games, num_of_threads, names_dict, catch_errors=True, show_output=False):
+
+        start_time = time.clock()
+
+        # Keeps track of total wins by each player
+        self.player_wins = {}
+
+        # Keeps track of total wins by each power
+        self.power_wins = {}
+
+        # Keeps track of total games played by each power
+        self.power_count = {}
+
+        # Keeps track of exception count
+        self.exceptions = 0
+
+        for i in range(num_of_games):
+
+            # Throw out games that throw an exception
+            try:
+                game = Game(names_dict, show_output)
+
+                for player in game.players:
+                    if player in game.game_winners:
+                        self.player_wins[player.name] = self.player_wins.get(player.name, 0) + 1
+                        self.power_wins[player.power] = self.power_wins.get(player.power, 0) + 1
+                    self.power_count[player.power] = self.power_count.get(player.power, 0) + 1
+
+            except:
+                self.exceptions += 1
+                i -= 1
+
+            # Shows progress every 200 games
+            if i % 200 == 0:
+                print(i)
+
+        self.total_time = time.clock() - start_time
+        self.average_time = self.total_time / num_of_games
 
 
+# Game class represents a single game of Cosmic Encounter
 class Game:
-    def __init__(self, names_dict, step_through = False):
+    def __init__(self, names_dict, show_output = False):
 
         # Simulation variables
-        self.step_through = step_through
+        self.show_output = show_output
 
         # Game variables
         self.warp = {} # Where "dead" ships are stored
@@ -21,13 +61,13 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Loser", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
-        # Loser - Loser declares if both players are trying to lose the encounter prior to the encounter
+        ### Loser - Loser declares if both players are trying to lose the encounter prior to the encounter
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Mirror - Can reverse the digits on an attack card after cards are selected
@@ -127,7 +167,7 @@ class Game:
             player.home_planets = self.home_planets(player)
 
         # A little guidance for navigating the console
-        if step_through:
+        if show_output:
             print("<Enter> to advance.\n")
 
         # This is the main while loop where an entire encounter is cycled through
@@ -141,14 +181,14 @@ class Game:
 
             self.encounter_winner = None
 
-            if step_through:
+            if show_output:
                 input("New Encounter")
 
         # Start Turn phase
             self.phase = "Start Turn"
 
             # Prints state of the game, which includes visible decks and players (their hands and planets)
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
 
@@ -162,7 +202,7 @@ class Game:
 
             self.output += "\n\nOffense: " + self.offense.name + "\n"
 
-            if step_through:
+            if show_output:
                 print(self.output)
                 input()
 
@@ -189,7 +229,7 @@ class Game:
 
             self.output += "Defense: " + self.defense.name + "\n\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
@@ -224,7 +264,7 @@ class Game:
             self.output += "Offense ships: " + str(self.offense_ships.get(self.offense.name, 0)) + "\n"
             self.output += "Defense ships: " + str(self.defense_ships.get(self.defense.name, 0)) + "\n\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
@@ -272,7 +312,7 @@ class Game:
 
             self.output += "\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
 
@@ -324,7 +364,7 @@ class Game:
             self.output += "Offense ships: " + str(sum(self.offense_ships.values())) + "\n"
             self.output += "Defense ships: " + str(sum(self.defense_ships.values())) + "\n\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
@@ -385,7 +425,7 @@ class Game:
             self.output += "Offense card selected.\n"
             self.output += "Defense card selected.\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
@@ -397,7 +437,7 @@ class Game:
             self.output += "\nOffense card: " + str(self.offense_card)
             self.output += "Defense card: " + str(self.defense_card) + "\n"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
                 print(self.output)
@@ -406,7 +446,7 @@ class Game:
         # Resolution phase
             self.phase = "Resolution"
 
-            if step_through:
+            if show_output:
                 print(self)
                 print("Phase: " + self.phase + "\n")
 
@@ -607,7 +647,7 @@ class Game:
             for player in self.players:
                 player.home_planets = self.home_planets(player)
 
-            if step_through:
+            if show_output:
                 print(self.output)
 
             # Adds encounter cards to discard pile
@@ -618,7 +658,7 @@ class Game:
 
             self.game_output += self.output
 
-            if step_through:
+            if show_output:
                 input()
 
         # People at five colonies should have been added in self.is_over()
