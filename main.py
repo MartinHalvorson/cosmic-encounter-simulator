@@ -1,14 +1,12 @@
 import Simulator
 
-num_games_simulated = 10000
-num_of_threads = 1
+num_games_simulated = 1000000
+num_players = 5
 
-sim = Simulator.Simulator(num_games_simulated, num_of_threads, [
-    {"name": "Alvin"},
-    {"name": "Brady"},
-    {"name": "Charlie"},
-    {"name": "Donnie"},
-    {"name": "Ernie"}], 
+names_list = ["Alvin", "Brady", "Charlie", "Daniel", "Ernie", "Freddie", "Gale", "Henry"]
+
+sim = Simulator.Simulator(num_games_simulated,
+    [{"name": names_list[i]} for i in range(num_players)],
         catch_errors=True,
         show_output=False)
 
@@ -16,6 +14,7 @@ sim = Simulator.Simulator(num_games_simulated, num_of_threads, [
 print("\nTotal Time: " + str(round(sim.total_time, 2)) + " seconds")
 print("Average Time: " + str(round(sim.average_time, 4)) + " seconds")
 print("Number of Exceptions: " + str(sim.exceptions))
+print("Average Wins: " + str(sim.average_wins))
 
 # Display winning percentages for each player
 print("\nPlayer Win Percentages:")
@@ -33,4 +32,4 @@ for tuple in sim.power_count.items():
 # Sort so winningest alien powers are first
 power_win_list.sort(key=lambda x: x[1], reverse=True)
 for power_tuple in power_win_list:
-    print(power_tuple[0] + ": " + str(round(100 * power_tuple[1], 1)))
+    print(str(power_tuple[0]) + ": " + str(round(100 * power_tuple[1], 1)))

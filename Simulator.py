@@ -4,7 +4,7 @@ import time
 
 # Simulator class simulates num_of_games Game(s) and keeps track of results
 class Simulator:
-    def __init__(self, num_of_games, num_of_threads, names_dict, catch_errors=True, show_output=False):
+    def __init__(self, num_of_games, names_dict, catch_errors=True, show_output=False):
 
         start_time = time.clock()
 
@@ -52,6 +52,8 @@ class Simulator:
 
         self.total_time = time.clock() - start_time
         self.average_time = self.total_time / num_of_games
+        self.total_wins = sum(self.power_wins.values())
+        self.average_wins = self.total_wins / num_of_games
 
 # Game class represents a single game of Cosmic Encounter
 class Game:
@@ -69,13 +71,12 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
-        ### Loser - Loser declares if both players are trying to lose the encounter prior to the encounter
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Mirror - Can reverse the digits on an attack card after cards are selected
@@ -86,10 +87,11 @@ class Game:
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
         # Warpish - adds the total number of ships in the warp to total score (as main player)
+        # Warrior - Add 1 token for win, 2 for lose or failed deal. Tokens added to total in encounter.
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Next: Loser, Antimatter, then Tick-Tock, Warrior
+        # Next: Loser, Antimatter, then Tick-Tock
         # Tier 1: Leviathan, Loser, Vulch, Macron, Antimatter, Mite
         # Tier 1.5: Pickpocket, Shadow
         # Tier 2: Philanthropist, Filch, Reserve
@@ -167,8 +169,9 @@ class Game:
         self.is_over = False
         self.game_winners = []
 
-        # Used to set winner of encounter
+        # Used to set winner/loser of encounter
         self.encounter_winner = None
+        self.encounter_loser = None
 
         # Sets home planets for each player
         for player in self.players:
@@ -188,6 +191,7 @@ class Game:
             self.is_Loser_active = False
 
             self.encounter_winner = None
+            self.encounter_loser = None
 
             if show_output:
                 input("New Encounter")
@@ -256,7 +260,7 @@ class Game:
             # Ships offense is sending into the encounter
             offense_ships_chosen = 3
 
-            if self.offense.power in ["Masochist", "Zombie"]:
+            if self.offense.power in ["Masochist", "Zombie"] and self.offense.power_active:
                 offense_ships_chosen = 4
 
             self.offense_ships = {self.offense.name: offense_ships_chosen}
@@ -285,7 +289,7 @@ class Game:
             self.defense_allies = []
 
             # Offense logically invites anyone equal or less than them
-            self.offense_num_planets = self.num_of_foreign_colonies(self.offense)
+            self.offense_num_planets = len(self.offense.foreign_colonies)
             for player in self.players:
                 if player is not self.offense and player is not self.defense:
                     if self.ranking.get(player.name, 0) <= self.offense_num_planets:
@@ -329,14 +333,14 @@ class Game:
                 if not (player is self.offense or player is self.defense):
 
                     # Parasite Alien Power - can join either side whether invited or not
-                    if player.power == "Parasite":
+                    if player.power == "Parasite" and player.power_active:
                         if player not in self.offense_allies:
                             self.offense_allies.append(player)
                         if player not in self.defense_allies:
                             self.defense_allies.append(player)
 
                     if (player in self.offense_allies and player in self.defense_allies):
-                        if self.offense_num_planets == 4 and not self.num_of_foreign_colonies(player) == 4:
+                        if self.offense_num_planets == 4 and not len(player.foreign_colonies) == 4:
                             # Sides with defense
                             self.offense_allies.remove(player)
                         else:
@@ -345,7 +349,7 @@ class Game:
 
             self.default_ally_ships_sent = 2
 
-            if player.power in ["Masochist", "Zombie"]:
+            if player.power in ["Masochist", "Zombie"] and player.power_active:
                 self.default_ally_ships_sent = 4
 
             # Add in ships for allies
@@ -392,14 +396,14 @@ class Game:
                 self.output += self.defense.name + " draws a new hand.\n"
 
             # Trader Alien Power
-            if self.offense.power == "Trader" and len(self.offense.hand) < len(self.defense.hand):
+            if self.offense.power == "Trader" and self.offense.power_active and len(self.offense.hand) < len(self.defense.hand):
                 self.offense.hand, self.defense.hand = self.defense.hand, self.offense.hand
-            if self.defense.power == "Trader" and len(self.defense.hand) < len(self.offense.hand):
+            if self.defense.power == "Trader" and self.defense.power_active and len(self.defense.hand) < len(self.offense.hand):
                 self.offense.hand, self.defense.hand = self.defense.hand, self.offense.hand
 
             # Kamikazee Alien Power
             for player in [self.offense, self.defense]:
-                if player.power == "Kamikazee":
+                if player.power == "Kamikazee" and player.power_active:
                     amount_chosen = 3
                     self.output += "Kamikazee power activated for " + player.name + "!\n\n"
                     self.take_ships(player, amount_chosen)
@@ -408,7 +412,7 @@ class Game:
 
             # Loser Alien Power - choose to activate or not
             for player in [self.offense, self.defense]:
-                if player.power == "Loser":
+                if player.power == "Loser" and player.power_active:
                     min_card = player.select_min()
                     if min_card.value <= 4:
                         self.is_Loser_active = True
@@ -423,10 +427,10 @@ class Game:
             self.defense.hand.remove(self.defense_card)
 
             # Choosing to activate Mirror (if one of main players)
-            if self.offense.power == "Mirror":
+            if self.offense.power == "Mirror" and self.offense.power_active:
                 if self.offense_card.value < self.offense_card.mirrored():
                     self.is_Mirror_active = True
-            if self.defense.power == "Mirror":
+            if self.defense.power == "Mirror" and self.defense.power_active:
                 if self.defense_card.value < self.defense_card.mirrored():
                     self.is_Mirror_active = True
 
@@ -486,6 +490,10 @@ class Game:
                 for player in self.defense_allies:
                     self.return_ships(player, self.defense_ships.get(player.name, 0))
 
+                # Adjust Warrior (on defense) to appropriate total
+                if self.defense.power == "Warrior":
+                    self.defense.warrior_tokens -= 1
+
                 self.encounter_winner = self.offense
 
                 self.output += "Colony swap occurred.\n"
@@ -494,10 +502,10 @@ class Game:
             else:
 
                 # Pacifist Alien Power
-                if self.offense.power == "Pacifist" and offense_value == 0:
+                if self.offense.power == "Pacifist" and self.offense.power_active and offense_value == 0:
                     self.encounter_winner = self.offense
                     self.output += "Pacifist power activated on offense!\n"
-                elif self.defense.power == "Pacifist" and defense_value == 0:
+                elif self.defense.power == "Pacifist" and self.defense.power_active and defense_value == 0:
                     self.encounter_winner = self.defense
                     self.output += "Pacifist power activated on defense!\n"
 
@@ -521,14 +529,14 @@ class Game:
                 else:
 
                     # Tripler Alien Power
-                    if self.offense.power == "Tripler":
+                    if self.offense.power == "Tripler" and self.offense.power_active:
                         self.output += "Tripler power activated for offense!\n\n"
 
                         if offense_value > 10:
                             offense_value = int((offense_value + 2) / 3) # Rounds up
                         else:
                             offense_value = int(offense_value * 3)
-                    if self.defense.power == "Tripler":
+                    if self.defense.power == "Tripler" and self.defense.power_active:
                         self.output += "Tripler power activated for defense!\n\n"
 
                         if defense_value > 10:
@@ -537,10 +545,10 @@ class Game:
                             defense_value = int(defense_value * 3)
 
                     # Virus Alien Power (multiplies card value by number of ships)
-                    if self.offense.power == "Virus":
+                    if self.offense.power == "Virus" and self.offense.power_active:
                         offense_value = offense_value * self.offense_ships.get(self.offense.name, 0) - self.offense_ships.get(self.offense.name, 0)
                         self.output += "Virus power activated for offense!\n\n"
-                    if self.defense.power == "Virus":
+                    if self.defense.power == "Virus" and self.defense.power_active:
                         defense_value = defense_value * self.defense_ships.get(self.defense.name, 0) - self.defense_ships.get(self.defense.name, 0)
                         self.output += "Virus power activated for defense!\n\n"
 
@@ -549,12 +557,20 @@ class Game:
                     defense_value += sum(self.defense_ships.values())
 
                     # Warpish Alien Power (adds ships in warp to total)
-                    if self.offense.power == "Warpish":
+                    if self.offense.power == "Warpish" and self.offense.power_active:
                         offense_value += sum(self.warp.values())
                         self.output += "Warpish power activated for offense!\n\n"
-                    if self.defense.power == "Warpish":
+                    if self.defense.power == "Warpish" and self.defense.power_active:
                         defense_value += sum(self.warp.values())
                         self.output += "Warpish power activated for defense!\n\n"
+
+                    # Warrior Alien Power
+                    if self.offense.power == "Warrior" and self.offense.power_active:
+                        offense_value += self.offense.warrior_tokens
+                        self.output += "Warrior power activated for offense!\n\n"
+                    if self.defense.power == "Warpish" and self.defense.power_active:
+                        defense_value += self.defense.warrior_tokens
+                        self.output += "Warrior power activated for defense!\n\n"
 
                     # Add some option for reinforcements later
 
@@ -617,8 +633,14 @@ class Game:
                 else:
                     raise Exception("self.encounter_winner is still None at end of encounter.")
 
+            # Set encounter loser
+            if self.encounter_winner == self.offense:
+                self.encounter_loser = self.defense
+            else:
+                self.encounter_loser = self.offense
+
             # Cudgel Alien Power
-            if self.encounter_winner.power == "Cudgel":
+            if self.encounter_winner.power == "Cudgel" and self.encounter_winner.power_active:
                 if self.offense == self.encounter_winner:
                     self.take_ships(self.defense, self.offense_ships.get(self.offense.name, 0))
                     self.output += "Cudgel power activated for offense!\n\n"
@@ -627,7 +649,7 @@ class Game:
                     self.output += "Cudgel power activated for defense!\n\n"
 
             # Ghoul Alien Power
-            if self.encounter_winner.power == "Ghoul":
+            if self.encounter_winner.power == "Ghoul" and self.encounter_winner.power_active:
                 if self.encounter_winner == self.offense:
                     self.draw_rewards(self.offense, sum(self.defense_ships.values()))
                 elif self.encounter_winner == self.defense:
@@ -636,9 +658,15 @@ class Game:
                     raise Exception("Exception raised in Ghoul Rewards section!")
 
             for player in self.players:
-                if player.power == "Zombie":
+                if player.power == "Zombie" and player.power_active:
                     self.return_ships(player, self.warp.get(player.name, 0))
                     self.warp[player.name] = 0
+
+            # Warrior Alien Power (+1 token in win, +2 tokens in loss)
+            if self.encounter_winner.power == "Warrior":
+                self.encounter_winner.warrior_tokens += 1
+            if self.encounter_loser.power == "Warrior":
+                self.encounter_winner.warrior_tokens += 2
 
             # Prevent offense from going a third time or going again if they lost
             if ((self.encounter == 1 and self.encounter_winner == self.offense) or self.offense.power == "Machine") and self.offense.has_encounter_card():
@@ -654,6 +682,9 @@ class Game:
             # Updates planet list for each player if any were changed
             for player in self.players:
                 player.home_planets = self.home_planets(player)
+                player.foreign_colonies = self.foreign_colonies(player)
+                if len(player.home_planets) < 3 and not player.power == "Masochist":
+                    player.power_active = False
 
             if show_output:
                 print(self.output)
@@ -714,7 +745,7 @@ class Game:
         if self.is_Loser_active:
             return self.offense.select_min()
 
-        elif self.offense.power == "Tripler":
+        elif self.offense.power == "Tripler" and self.offense.power_active:
             return self.offense.tripler_select()
 
         else:
@@ -729,10 +760,10 @@ class Game:
         if self.is_Loser_active:
             return self.defense.select_min()
 
-        elif self.defense.power == "Parasite":
+        elif self.defense.power == "Parasite" and self.defense.power_active:
             return self.defense.select_max()
 
-        elif self.defense.power == "Tripler":
+        elif self.defense.power == "Tripler" and self.defense.power_active:
             return self.defense.tripler_select()
 
         # "def-neg" strategy is to play a negotiate as defense to obtain more cards
@@ -750,16 +781,17 @@ class Game:
 
     def check_if_over(self):
         for player in self.players:
-            if self.num_of_foreign_colonies(player) == 5:
+            if len(player.foreign_colonies) == 5:
                 self.is_over = True
                 self.game_winners.append(player)
             if player.power == "Masochist" and self.warp.get(player.name, 0) == 20:
                 self.is_over = True
                 self.game_winners.append(player)
-            if player.power == "Genius" and len(player.hand) >= 20:
+            if player.power == "Genius" and player.power_active and len(player.hand) >= 20:
                 self.is_over = True
                 self.game_winners.append(player)
 
+    # Removes num_ships in total from player's home colonies
     def take_ships(self, player, num_ships):
         # Remove appropriate number of ships from offense's (home) planets
         for i in range(num_ships):
@@ -769,6 +801,11 @@ class Game:
             else:
                 i -= 1
 
+    # Models another player choosing to take another's ships, strategically removes single ship colonies
+    def snipe_ships(self, player, num_ships):
+        pass
+
+    # Adds num_ships in total to player's home colonies
     def return_ships(self, player, num_ships):
         for i in range(num_ships):
             planet = random.choice(player.home_planets)
@@ -797,18 +834,18 @@ class Game:
                 result.append(planet)
         return result
 
-    # Counts number of foreign colonies a player has
-    def num_of_foreign_colonies(self, player):
-        count = 0
+    # Returns list of foreign planets of input player
+    def foreign_colonies(self, player):
+        result = []
         for planet in self.planets:
-            if (planet.owner != player) and (planet.ships.get(player.name, 0) != 0):
-                count += 1
-        return count
+            if not planet.owner == player and not planet.ships.get(player.name, 0) == 0:
+                result.append(planet)
+        return result
 
     def set_ranking(self):
         # Fanciest lines of code in whole project
         # Takes a list of tuples (player, num_of_foreign_colonies) and converts it to a string output
-        self.ordered_ranking = [(player.name, self.num_of_foreign_colonies(player)) for player in self.players]
+        self.ordered_ranking = [(player.name, len(player.foreign_colonies)) for player in self.players]
         self.ordered_ranking.sort(key = lambda x: x[1], reverse = True)
         for pair in self.ordered_ranking:
             self.ranking[pair[0]] = pair[1]
@@ -842,6 +879,8 @@ class Player:
         self.name = name
         self.color = color
         self.power = power
+        self.power_active = True  # If Player has fewer than three home planets, he/she loses power
+        self.warrior_tokens = 0  # This stays 0 unless the player's alien power is Warrior
         self.strategy = strategy
         self.hidden = hidden # Used to hide opponent's hand
 
@@ -850,6 +889,7 @@ class Player:
 
         # Game finishes once a player or multiple players reach five foreign colonies
         self.home_planets = []
+        self.foreign_colonies = []
 
     def has_encounter_card(self):
         for card in self.hand:
