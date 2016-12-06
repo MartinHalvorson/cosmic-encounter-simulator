@@ -71,7 +71,7 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Tick Tock", "Trader", "Tripler", "Virus", "Vulch", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
@@ -85,6 +85,7 @@ class Game:
         # Pickpocket - "Lifts" random card from a player who has a colony in his/her home system
         # Shadow - Removes one ship of choice from result of destiny card
         # Symbiote - starts with double (40) the number of ships
+        # Tick Tock - Has 10 tokens. Removes token with defensive win, successful negotiate.
         # Trader - may swap hands with opponent prior to encounter
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
@@ -94,7 +95,7 @@ class Game:
         # None - no alien power
 
         # Next: Loser, Antimatter, then Tick-Tock
-        # Tier 1: Leviathan, Loser, Vulch, Macron, Antimatter, Mite
+        # Tier 1: Leviathan, Macron, Mite
         # Tier 1.5: Shadow
         # Tier 2: Philanthropist, Filch, Reserve
         # Tier 3: Disease, Void, Vacuum
@@ -516,6 +517,12 @@ class Game:
                 for player in self.defense_allies:
                     self.return_ships(player, self.defense_ships.get(player.name, 0))
 
+                # Tick Tock Alien Power
+                for player in self.players:
+                    if player.power == "Tick Tock" and player.power_active:
+                        self.output += "Tick Tock power activated."
+                        player.tick_tock_tokens += 1
+
                 # Adjust Warrior (on defense) to appropriate total
                 if self.defense.power == "Warrior":
                     self.defense.warrior_tokens -= 1
@@ -683,6 +690,13 @@ class Game:
                 else:
                     raise Exception("Exception raised in Ghoul Rewards section!")
 
+            # Tick Tock Alien Power
+            if self.encounter_winner == self.defense:
+                for player in self.players:
+                    if player.power == "Tick Tock" and player.power_active:
+                        self.output += "Tick Tock power activated."
+                        player.tick_tock_tokens += 1
+
             for player in self.players:
                 if player.power == "Zombie" and player.power_active:
                     self.return_ships(player, self.warp.get(player.name, 0))
@@ -816,6 +830,9 @@ class Game:
             if player.power == "Genius" and player.power_active and len(player.hand) >= 20:
                 self.is_over = True
                 self.game_winners.append(player)
+            if player.power == "Tick Tock" and player.power_active and player.tick_tock_tokens >= 10:
+                self.is_over = True
+                self.game_winners.append(player)
 
     # Removes num_ships in total from player's home colonies
     def take_ships(self, player, num_ships):
@@ -947,6 +964,7 @@ class Player:
         self.power = power
         self.power_active = True  # If Player has fewer than three home planets, he/she loses power
         self.warrior_tokens = 0  # This stays 0 unless the player's alien power is Warrior
+        self.tick_tock_tokens = 0  # This stays 0 unless the player's alien power is Tick-Tock
         self.strategy = strategy
         self.hidden = hidden # Used to hide opponent's hand
 
