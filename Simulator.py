@@ -71,7 +71,7 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
@@ -83,6 +83,7 @@ class Game:
         # Pacifist - Wins if he/she plays a negotiate and opponent plays an attack card
         # Parasite - Can join an encounter whether invited or not
         # Pickpocket - "Lifts" random card from a player who has a colony in his/her home system
+        # Shadow - Removes one ship of choice from result of destiny card
         # Symbiote - starts with double (40) the number of ships
         # Trader - may swap hands with opponent prior to encounter
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
@@ -94,7 +95,7 @@ class Game:
 
         # Next: Loser, Antimatter, then Tick-Tock
         # Tier 1: Leviathan, Loser, Vulch, Macron, Antimatter, Mite
-        # Tier 1.5: Pickpocket, Shadow
+        # Tier 1.5: Shadow
         # Tier 2: Philanthropist, Filch, Reserve
         # Tier 3: Disease, Void, Vacuum
         # Tier 4:
@@ -225,6 +226,12 @@ class Game:
             # Draw next destiny card, assign defense
             self.destiny_card = self.destiny_draw_deck.draw()
 
+            # Shadow Alien Power
+            for player in self.players:
+                if player.power == "Shadow" and player.power_active and not self.destiny_card.value == player.name:
+                    self.output += "Shadow power activated!\n\n"
+                    self.target_ships(self.destiny_card.other, 1)
+
             # If offense draws his/herself for a destiny (player to attack)
             while self.destiny_card.other == self.offense:
 
@@ -233,6 +240,19 @@ class Game:
 
                 # and redraw until they don't draw his/herself
                 self.destiny_card = self.destiny_draw_deck.draw()
+
+                # Shadow Alien Power (if new card is drawn)
+                for player in self.players:
+                    if player.power == "Shadow" and player.power_active and not self.destiny_card.value == player.name:
+                        self.output += "Shadow power activated!\n\n"
+                        self.target_ships(self.destiny_card.other, 1)
+
+            # Updates planet list for each player if any were changed
+            for player in self.players:
+                player.home_planets = self.home_planets(player)
+                player.foreign_colonies = self.foreign_colonies(player)
+                if len(player.home_planets) < 3 and not player.power == "Masochist":
+                    player.power_active = False
 
             # Assign the defense
             self.defense = self.destiny_card.other
@@ -807,9 +827,35 @@ class Game:
             else:
                 i -= 1
 
-    # Models another player choosing to take another's ships, strategically removes single ship colonies
-    def snipe_ships(self, player, num_ships):
-        pass
+    # Recursive method modeling targeting/removal of another's ships, strategically removes single ship colonies
+    def target_ships(self, player, num_ships):
+        if num_ships == 0:
+            return
+        else:
+            # Looks for foreign colonies with only one ship
+            for planet in player.foreign_colonies:
+                if planet.ships.get(player.name, 0) == 1:
+                    planet.ships[player.name] = 0
+                    self.target_ships(player, num_ships - 1)
+                    return
+            # Looks for home colonies with only one ship
+            for planet in player.home_planets:
+                if planet.ships.get(player.name, 0) == 1:
+                    planet.ships[player.name] = 0
+                    self.target_ships(player, num_ships - 1)
+                    return
+            # Looks for foreign colonies with multiple ships
+            for planet in player.foreign_colonies:
+                if planet.ships.get(player.name, 0) > 1:
+                    planet.ships[player.name] = 0
+                    self.target_ships(player, num_ships - 1)
+                    return
+            # Looks for home colonies with only one ship
+            for planet in player.home_planets:
+                if planet.ships.get(player.name, 0) > 1:
+                    planet.ships[player.name] = 0
+                    self.target_ships(player, num_ships - 1)
+                    return
 
     # Adds num_ships in total to player's home colonies
     def return_ships(self, player, num_ships):
@@ -853,7 +899,7 @@ class Game:
         valid_players = None
         for planet in player.home_planets:
             for other_player in self.players:
-                if planet in other_player.foreign_colonies and not other_player in valid_players:
+                if planet in other_player.foreign_colonies and not valid_players is None and not other_player in valid_players:
                     valid_players.append(other_player)
         if valid_players is None:
             return
