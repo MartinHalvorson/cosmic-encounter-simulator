@@ -71,11 +71,12 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Tick Tock", "Trader", "Tripler", "Virus", "Vulch", "Warpish", "Warrior", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Hacker", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Tick Tock", "Trader", "Tripler", "Virus", "Vulch", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
+        # Hacker - Chooses compensation from player
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
@@ -435,6 +436,7 @@ class Game:
             # Pickpocket Alien Power - "lifts" random card from player with colony in Pickpocket's home system
             for player in self.players:
                 if player.power == "Pickpocket" and player.power_active:
+                    self.output += "Pickpocket alien power activated!\n\n"
                     self.pickpocket_select(player)
 
             # Loser Alien Power - choose to activate or not
@@ -760,12 +762,22 @@ class Game:
 
     # Removes num_of_cards from player1 and gives them to player2
     def take_cards(self, player1, player2, num_of_cards):
-        for i in range(num_of_cards):
-            if len(player2.hand) > 0:
-                chosen_card = random.choice(player2.hand)
-                player2.hand.remove(chosen_card)
-                player1.hand.append(chosen_card)
-                self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
+        if player1.power == "Hacker" and player1.power_active:
+            target = player2
+            # Find player with the most cards
+            for player in self.players:
+                if len(player.hand) > len(target.hand) and not player == player1:
+                    target = player
+            for i in range(num_of_cards):
+                if len(target.hand) > 0:
+                    player1.hand.append(target.select_max())
+        else:
+            for i in range(num_of_cards):
+                if len(player2.hand) > 0:
+                    chosen_card = random.choice(player2.hand)
+                    player2.hand.remove(chosen_card)
+                    player1.hand.append(chosen_card)
+                    self.output += player1.name + " took " + player2.name + "'s " + str(chosen_card)
 
     # Discards card in appropriate discard deck, returns nothing
     def discard(self, card):
@@ -913,12 +925,12 @@ class Game:
 
     # Takes a card from a player who has a colony in the Pickpocket's home system
     def pickpocket_select(self, player):
-        valid_players = None
+        valid_players = []
         for planet in player.home_planets:
             for other_player in self.players:
-                if planet in other_player.foreign_colonies and not valid_players is None and not other_player in valid_players:
+                if planet in other_player.foreign_colonies and not other_player in valid_players:
                     valid_players.append(other_player)
-        if valid_players is None:
+        if valid_players == []:
             return
         else:
             target = random.choice(valid_players)
