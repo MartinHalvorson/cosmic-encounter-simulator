@@ -1,6 +1,6 @@
 import Simulator
 
-num_games_simulated = 1000000
+num_games_simulated = 1000
 num_players = 5
 
 names_list = ["Alvin", "Brady", "Charlie", "Daniel", "Ernie", "Freddie", "Gale", "Henry"]

@@ -71,7 +71,7 @@ class Game:
 
         self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Symbiote", "Trader", "Tripler", "Virus", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
@@ -82,6 +82,7 @@ class Game:
         # Mirror - Can reverse the digits on an attack card after cards are selected
         # Pacifist - Wins if he/she plays a negotiate and opponent plays an attack card
         # Parasite - Can join an encounter whether invited or not
+        # Pickpocket - "Lifts" random card from a player who has a colony in his/her home system
         # Symbiote - starts with double (40) the number of ships
         # Trader - may swap hands with opponent prior to encounter
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
@@ -409,6 +410,11 @@ class Game:
                     self.take_ships(player, amount_chosen)
                     self.add_ships_to_warp(player, amount_chosen)
                     self.draw_cards(player, amount_chosen * 2)
+
+            # Pickpocket Alien Power - "lifts" random card from player with colony in Pickpocket's home system
+            for player in self.players:
+                if player.power == "Pickpocket" and player.power_active:
+                    self.pickpocket_select(player)
 
             # Loser Alien Power - choose to activate or not
             for player in [self.offense, self.defense]:
@@ -841,6 +847,20 @@ class Game:
             if not planet.owner == player and not planet.ships.get(player.name, 0) == 0:
                 result.append(planet)
         return result
+
+    # Takes a card from a player who has a colony in the Pickpocket's home system
+    def pickpocket_select(self, player):
+        valid_players = None
+        for planet in player.home_planets:
+            for other_player in self.players:
+                if planet in other_player.foreign_colonies and not other_player in valid_players:
+                    valid_players.append(other_player)
+        if valid_players is None:
+            return
+        else:
+            target = random.choice(valid_players)
+            self.take_cards(player, target, 1)
+            return
 
     def set_ranking(self):
         # Fanciest lines of code in whole project
