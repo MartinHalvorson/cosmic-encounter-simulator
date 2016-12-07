@@ -1,13 +1,13 @@
 import Simulator
 
-num_games_simulated = 100000
+num_games_simulated = 1000
 num_players = 5
 
-names_list = ["Alvin", "Brady", "Charlie", "Daniel", "Ernie", "Freddie", "Gale", "Henry"]
+names_list = ["Alvin", "Brady", "Charlie", "Daniel", "Ernie", "Freddie", "Gale", "Henry", "Ivan", "Jack", "Karl", "Louie", "Matt", "Nick", "Oscar", "Peter", "Quinn", "Ryan", "Steve", "Ted", "Vance", "Wali"]
 
 sim = Simulator.Simulator(num_games_simulated,
     [{"name": names_list[i]} for i in range(num_players)],
-        catch_errors=True,
+        catch_errors=False,
         show_output=False)
 
 # Display clock stats

@@ -69,18 +69,20 @@ class Game:
         # Game Output used for debugging games that throw errors
         self.game_output = ""
 
-        self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown"]
+        self.colors = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Black", "White", "Brown", "Silver", "Gold", "Ruby", "Emerald", "Maroon", "Navy"]
 
-        self.powers = ["Cudgel", "Genius", "Ghoul", "Hacker", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Tick Tock", "Trader", "Tripler", "Virus", "Vulch", "Warpish", "Warrior", "Zombie", "None"]
+        self.powers = ["Cudgel", "Genius", "Ghoul", "Hacker", "Healer", "Kamikazee", "Machine", "Masochist", "Mirror", "Pacifist", "Parasite", "Pickpocket", "Shadow", "Symbiote", "Tick Tock", "Trader", "Tripler", "Vacuum", "Virus", "Warpish", "Warrior", "Zombie", "None"]
 
         # Cudgel - As a main player, when Cudgel wins, opponents lose as many ships as Cudgel had
         # Genius - Alternative win condition of having 20 or more cards in hand
         # Ghoul - As a main player, receive one defender reward for each ship defeated in an encounter
         # Hacker - Chooses compensation from player
+        # Healer - can heal others' ships (not go to warp) for cards
         # Kamikazee - As a main player, can trade in a ship for two cards (for up to four ships per encounter)
         # Machine - can have extra encounter so long as he/she has an encounter card at start of new encounter
         # Masochist - can win if it has no ships left in the game
         # Mirror - Can reverse the digits on an attack card after cards are selected
+        # Mite - forfeit encounter or discard down to three cards
         # Pacifist - Wins if he/she plays a negotiate and opponent plays an attack card
         # Parasite - Can join an encounter whether invited or not
         # Pickpocket - "Lifts" random card from a player who has a colony in his/her home system
@@ -89,18 +91,18 @@ class Game:
         # Tick Tock - Has 10 tokens. Removes token with defensive win, successful negotiate.
         # Trader - may swap hands with opponent prior to encounter
         # Tripler - triples card values under 10, divide by 3 for values over 10 (rounding up)
+        # Vacuum - Chooses another player to lose ships whenever vacuum loses ships
         # Virus - multiplies card value by number of ships he/she has in the encounter (only as main player)
         # Warpish - adds the total number of ships in the warp to total score (as main player)
         # Warrior - Add 1 token for win, 2 for lose or failed deal. Tokens added to total in encounter.
         # Zombie - cannot lose ships to the warp
         # None - no alien power
 
-        # Next: Loser, Antimatter, then Tick-Tock
-        # Tier 1: Leviathan, Macron, Mite
-        # Tier 1.5: Shadow
+        # Next: Loser, Antimatter
+        # Tier 1: Leviathan, Macron
         # Tier 2: Philanthropist, Filch, Reserve
-        # Tier 3: Disease, Void, Vacuum
-        # Tier 4:
+        # Tier 3: Disease, Void
+        # Tier 4: Mite
 
         # Initializing players
         self.players = []
@@ -905,6 +907,15 @@ class Game:
 
     # Adds num_of_ships to player's total ships in the warp
     def add_ships_to_warp(self, name_of_player, num_of_ships):
+        target = None
+        for player in self.players:
+            if player.name == name_of_player:
+                target = player
+        for player in self.players:
+            if player.power == "Healer" and player.power_active:
+                self.return_ships(target, num_of_ships)
+                self.draw_cards(player, 1)
+        # If Healer is not in the game
         self.warp[name_of_player] = self.warp.get(name_of_player, 0) + num_of_ships
 
     # Returns list of home planets of input player
