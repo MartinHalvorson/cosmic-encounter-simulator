@@ -1,6 +1,6 @@
 # Cosmic Encounter Simulator
 
-_This is a relatively old project from about ~5 years ago. Looking back the code definitely isn't the way I'd structure it today... which I guess is growth, right?_
+_This is a relatively old project from about ~8 years ago. Looking back, the code definitely isn't how I'd write it today... which I guess is growth, right? I loved making this at the time so I'm happy to keep it up on GitHub!_
 
 This simulator models the game of Cosmic Encounter with various alien powers. I use heuristics and some basic AI to model rational player interactions.
 
